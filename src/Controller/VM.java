@@ -37,7 +37,7 @@ public class VM {
     Configuration config;
     
     
-    public VM(Hashtable vmParameters, VMRequest request,int vmID, int slot,int hostID,String hostName,Configuration config) {
+    public VM (Hashtable vmParameters, VMRequest request,int vmID, int slot,int hostID,String hostName,Configuration config) {
         
         this.config=config;
         this.hostID=hostID;

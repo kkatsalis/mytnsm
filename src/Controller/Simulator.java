@@ -53,18 +53,7 @@ public class Simulator {
 
     Controller _controller;
 
-    // How to create requests per Service, one per provider
-    Exponential[][] _rateExponentialGenerator;
-    Pareto[][] _rateParetoGenerator;
-
-    // Lifetime of VM one per provider
-    Exponential[][] _lifetimeExponentialGenerator;
-    Pareto[][] _lifetimeParetoGenerator;
-
-    // How to create web requests per Service, one per provider
-    Exponential[][] _webRequestArrivalRateExponentialGenerator;
-    Pareto[][] _webRequestArrivalRateParetoGenerator;
-
+    
     DBClass _db;
     DBUtilities _dbUtilities;
     Random rand;
@@ -99,11 +88,9 @@ public class Simulator {
 
         initializeNodesAndSlots(); //creates: Hosts, Clients, Slots
         initializeProviders();
-        initializeServiceArrivalRateGenerators();
-        initializeLifeTimeGenerators();
-        initializeWebRequestsArrivalRateGenerators();
 
         initiliazeWebRequestStatsSlot();
+
         this._controller = new Controller(_hosts, _webClients, _config, _slots, _dbUtilities, _provider);
 
         addInitialServiceRequestEvents();
@@ -112,141 +99,12 @@ public class Simulator {
 
         System.out.println("********** End of System Initialization Phase **************");
         System.out.println();
-
-        if (true) {
-            this.startClientsRequests();
-        }
-    }
-
-    private void initializeLifeTimeGenerators() {
-
-        // Lifetime of VM one per provider
-        _lifetimeExponentialGenerator = new Exponential[_config.getProvidersNumber()][_config.getServicesNumber()];
-        _lifetimeParetoGenerator = new Pareto[_config.getProvidersNumber()][_config.getServicesNumber()];
-
-        String lifetimeType = "";
-        String parameter = "";
-        double lamda;
-        double location;
-        double shape;
-
-        int servicesNumber = 0;
-
-        for (int i = 0; i < _config.getProvidersNumber(); i++) {
-            servicesNumber = _provider[i].getRequestsForService().size();
-
-            for (int j = 0; j < servicesNumber; j++) {
-                parameter = "provider" + i + "_service" + j + "_lifetimeType";
-                lifetimeType = String.valueOf(_provider[i].getRequestsForService().get(j).getLifeTimeConfig().get(parameter));
-
-                if (lifetimeType.equals(EGeneratorType.Exponential.toString())) {
-
-                    parameter = "provider" + i + "_service" + j + "_lifetime_lamda";
-                    lamda = Double.valueOf(String.valueOf(_provider[i].getRequestsForService().get(j).getLifeTimeConfig().get(parameter)));
-                    _lifetimeExponentialGenerator[i][j] = new Exponential(lamda);
-
-                } else if (lifetimeType.equals(EGeneratorType.Pareto.toString())) {
-
-                    parameter = "provider" + i + "_service" + j + "_lifetime_location";
-                    location = Double.valueOf(String.valueOf(_provider[i].getRequestsForService().get(j).getLifeTimeConfig().get(parameter)));
-                    parameter = "provider" + i + "_service" + j + "_lifetime_shape";
-                    shape = Double.valueOf(String.valueOf(_provider[i].getRequestsForService().get(j).getLifeTimeConfig().get(parameter)));
-
-                    _lifetimeParetoGenerator[i][j] = new Pareto(location, shape); //Dummy object
-                }
-
-            }
-
-        }
-    }
-
-    private void initializeServiceArrivalRateGenerators() {
-
-        // How to create requests per Service, one per provider
-        _rateExponentialGenerator = new Exponential[_config.getProvidersNumber()][_config.getServicesNumber()];
-        _rateParetoGenerator = new Pareto[_config.getProvidersNumber()][_config.getServicesNumber()];
- 
        
-        String rateType = "";
-        String parameter = "";
-        double lamda;
-        double location;
-        double shape;
-
-        int servicesNumber = 0;
-
-        for (int i = 0; i < _config.getProvidersNumber(); i++) {
-            servicesNumber = _provider[i].getRequestsForService().size();
-
-            for (int j = 0; j < servicesNumber; j++) {
-                parameter = "provider" + i + "_service" + j + "_RateType";
-                rateType = String.valueOf(_provider[i].getRequestsForService().get(j).getRequestRateConfig().get(parameter));
-
-                if (rateType.equals(EGeneratorType.Exponential.toString())) {
-
-                    parameter = "provider" + i + "_service" + j + "_rate_lamda";
-                    lamda = Double.valueOf(String.valueOf(_provider[i].getRequestsForService().get(j).getRequestRateConfig().get(parameter)));
-                    _rateExponentialGenerator[i][j] = new Exponential(lamda);
-
-                } else if (rateType.equals(EGeneratorType.Pareto.toString())) {
-
-                    parameter = "provider" + i + "_service" + j + "_rate_location";
-                    location = Double.valueOf(String.valueOf(_provider[i].getRequestsForService().get(j).getRequestRateConfig().get(parameter)));
-                    parameter = "provider" + i + "_service" + j + "_rate_shape";
-                    shape = Double.valueOf(String.valueOf(_provider[i].getRequestsForService().get(j).getRequestRateConfig().get(parameter)));
-
-                    _rateParetoGenerator[i][j] = new Pareto(location, shape); //Dummy object
-                }
-
-            }
-
-        }
-
     }
 
-    private void initializeWebRequestsArrivalRateGenerators() {
+  
 
-        // How to create requests per Service, one per provider
-        _webRequestArrivalRateExponentialGenerator = new Exponential[_config.getProvidersNumber()][_config.getServicesNumber()];
-        _webRequestArrivalRateParetoGenerator = new Pareto[_config.getProvidersNumber()][_config.getServicesNumber()];
-
-        String rateType = "";
-        String parameter = "";
-        double lamda;
-        double location;
-        double shape;
-
-        int servicesNumber = 0;
-
-        for (int i = 0; i < _config.getProvidersNumber(); i++) {
-            servicesNumber = _provider[i].getRequestsForService().size();
-
-            for (int j = 0; j < servicesNumber; j++) {
-                parameter = "provider" + i + "_service" + j + "_webRequestType";
-                rateType = String.valueOf(_provider[i].getRequestsForService().get(j).getWebRequestsArrivalRateConfig().get(parameter));
-
-                if (rateType.equals(EGeneratorType.Exponential.toString())) {
-
-                    parameter = "provider" + i + "_service" + j + "_webRequest_lamda";
-                    lamda = Double.valueOf(String.valueOf(_provider[i].getRequestsForService().get(j).getWebRequestsArrivalRateConfig().get(parameter)));
-                    lamda = (double) 1 / lamda;
-                    _webRequestArrivalRateExponentialGenerator[i][j] = new Exponential(lamda);
-
-                } else if (rateType.equals(EGeneratorType.Pareto.toString())) {
-
-                    parameter = "provider" + i + "_service" + j + "_webRequest_location";
-                    location = Double.valueOf(String.valueOf(_provider[i].getRequestsForService().get(j).getWebRequestsArrivalRateConfig().get(parameter)));
-                    parameter = "provider" + i + "_service" + j + "_webRequest_shape";
-                    shape = Double.valueOf(String.valueOf(_provider[i].getRequestsForService().get(j).getWebRequestsArrivalRateConfig().get(parameter)));
-
-                    _webRequestArrivalRateParetoGenerator[i][j] = new Pareto(location, shape); //Dummy object
-                }
-
-            }
-
-        }
-
-    }
+  
 
     private void initializeNodesAndSlots() {
 
@@ -264,16 +122,7 @@ public class Simulator {
         // Initialize Clients
         this._webClients = new WebClient[_config.getClientNames().size()];
 
-        for (int c = 0; c < _webClients.length; c++) {
-            _webClients[c] = new WebClient(_config, c, rand.nextInt(_config.getProvidersNumber()), _clientNames.get(c), _controller);
-            for (int p = 0; p < _config.getProvidersNumber(); p++) {
-                for (int s = 0; s < _config.getServicesNumber(); s++) {
-                    _clientsTimer[c][p][s] = new Timer();
-                }
-
-            }
-
-        }
+      
 
         System.out.println("Simulator Initialization: Client Objects - OK");
 
@@ -291,20 +140,6 @@ public class Simulator {
 
     }
 
-    private void startClientsRequests() {
-
-        System.out.println("********** Clients Requests Loader ****************");
-
-        for (int c = 0; c < _webClients.length; c++) {
-            for (int p = 0; p < _config.getProvidersNumber(); p++) {
-                for (int s = 0; s < _config.getServicesNumber(); s++) {
-                    _clientsTimer[c][p][s].schedule(new ExecuteClientRequest(_webRequestStatsSlot, c, p, s, 0), 100); //Start the Client Requests (initial delay 100)
-                }
-            }
-            System.out.println("****** All Clients Request Generators Loaded ******");
-            System.out.println();
-        }
-    }
 
     private void addInitialServiceRequestEvents() {
 

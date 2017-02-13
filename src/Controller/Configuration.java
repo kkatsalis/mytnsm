@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Properties;
 import java.util.Queue;
@@ -28,96 +29,80 @@ public class Configuration {
     int simulationID;
     int runID;
     int numberOfSlots;
-    int providersNumber;
+
     int hostsNumber;
-    int clientsNumber;
-    int servicesNumber;
-    int vmTypesNumber;
-    int machineResourcesNumber;
-    int cloudVM_number;
+    int providersNumber;
+    int servicesNumber; // Each Service Corresponds to one VNF
+
 
     String algorithm;
-    String nitosServer;
     int slotDuration;
     String slotDurationMetric;
-    int numberOfMachineStatsPerSlot;
 
+
+    
+    //========= ClOUD ==========
+    Hashtable[]  host_machine_config; // host name, ip 
+    
+    double cpu_host;  		// for simulations only
+    double memory_host; 	// for simulations only
+    double storage_host; 	// for simulations only
+    double bandwidth_host;	// for simulations only
+    
+    // VM specification
+    int vmTypesNumber;
+    String[] vm_type_name; 
+    double[] vm_cpu; //One per VM Type 0:small, 1:medium, 2:large
+    double[] vm_memory; //One per VM Type
+    double[] vm_storage; //One per VM Type
+    double[] vm_bandwidth; //One per VM Type
+
+    // Host specification
+    String remote_machine_ip; //when not local every service is deployed there
+    
+
+    
+    
+    //========= CPLEX ==========	
     double[] phiWeight;
     double priceBase;
-
-    List<String> cloudVM_IPs = new ArrayList<>();
-    List<String> clientNames = new ArrayList<>();
-    List<String> hostNames = new ArrayList<>();
-    List<String> vmTypesNames = new ArrayList<>();
-
-    double cpu_host;
-    double memory_host;
-    double storage_host;
-    double bandwidth_host;
-
-    double[] cpu_VM; //One per VM Type 0:small, 1:medium, 2:large
-    double[] memory_VM; //One per VM Type
-    double[] storage_VM; //One per VM Type
-    double[] bandwidth_VM; //One per VM Type
-
-    double[][] penalty; //[i][k] provider i, service k
-    double[][][] xi; //[i][k] provider i, service k
-
-    double omega;
-    int abRequestsNumber = 1000;
-    int abBatchRequestsNumber = 100;
+    double[][] penalty; //[p][s] provider p, service s
+    double[][] xi; //[v][s] vm v, service s
     
-    int skipWebClientStats;
-    HashMap associatedAPsPerClient;
-
+    //========= STATS ==========
+    double omega;
+    int numberOfMachineStatsPerSlot;
     String statsUpdateMethod;
 
-     public Configuration(String _algorithm,int _simulationID,int _runID) {
-
-        this.clientNames = new ArrayList<>();
-        this.hostNames = new ArrayList<>();
-        this.vmTypesNames = new ArrayList<>();
-        this.associatedAPsPerClient = new HashMap();
-
-        this.addHostNodes();
-
-        this.addClientNodes();
-        this.addVmTypes();
-        this.loadProperties(_algorithm,_simulationID,_runID);
-        this.loadFairnessWeights();
-        this.loadResources();
-        this.loadPenalties();
-        this.loadXi();
-        this.loadExternalCloudParameters();
-
-    }
 
     public Configuration() {
 
-        this.clientNames = new ArrayList<>();
-        this.hostNames = new ArrayList<>();
-        this.vmTypesNames = new ArrayList<>();
-        this.associatedAPsPerClient = new HashMap();
+        // simulation parameters
+        this.loadSimProperties();
+        
+    	this.addHostNodes();
+        this.addMachinesConfig();
 
-        this.addHostNodes();
-
-        this.addClientNodes();
-        this.addVmTypes();
-        this.loadProperties();
-        this.loadFairnessWeights();
         this.loadResources();
-        this.loadPenalties();
+    	
+    	// Provider parameters
+    	
+    	
+        // CPLEX parameters
+        this.loadCplexParameters();
         this.loadXi();
+        
+        
         this.loadExternalCloudParameters();
 
     }
 
-    private void addHostNodes() {
+    @SuppressWarnings("unchecked")
+	private void addHostNodes() {
 
         Properties property = new Properties();
         InputStream input = null;
         String filename = "simulation.properties";
-
         input = Configuration.class.getClassLoader().getResourceAsStream(filename);
 
         try {
@@ -128,55 +113,27 @@ public class Configuration {
         }
 
         hostsNumber = Integer.valueOf(property.getProperty("hostsNumber"));
-
+        host_machine_config=new Hashtable[hostsNumber];
+        
         String parameter = "";
         String hostName = "";
-
+        String host_ip="";
+        
         // InterArrival Time
         for (int i = 0; i < hostsNumber; i++) {
-            parameter = "host_" + i;
+        	host_machine_config[i].put("id", i);
+        	parameter = "host_" + i;
             hostName = String.valueOf((String) property.getProperty(parameter));
-            hostNames.add(hostName);
+            host_machine_config[i].put("name", hostName);
+            parameter = "host_ip_" + i;
+            host_ip = String.valueOf((String) property.getProperty(parameter));
+            host_machine_config[i].put("ip", host_ip);
         }
 
     }
 
-    private void addClientNodes() {
 
-        Properties property = new Properties();
-        InputStream input = null;
-        String filename = "simulation.properties";
-
-        input = Configuration.class.getClassLoader().getResourceAsStream(filename);
-
-        try {
-            // load a properties file
-            property.load(input);
-        } catch (IOException ex) {
-            Logger.getLogger(Configuration.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        clientsNumber = Integer.valueOf(property.getProperty("clientsNumber"));
-
-        String parameter = "";
-        String clientName = "";
-        String associatedAP;
-
-        // InterArrival Time
-        for (int i = 0; i < clientsNumber; i++) {
-            parameter = "client_" + i;
-            clientName = String.valueOf((String) property.getProperty(parameter));
-            clientNames.add(clientName);
-
-            parameter = "client_" + i + "_ap";
-            associatedAP = String.valueOf((String) property.getProperty(parameter));
-            associatedAPsPerClient.put(parameter, associatedAP);
-
-        }
-
-    }
-
-    private void addVmTypes() {
+    private void addMachinesConfig() {
 
         Properties property = new Properties();
         InputStream input = null;
@@ -193,59 +150,65 @@ public class Configuration {
 
         vmTypesNumber = Integer.valueOf(property.getProperty("vmTypesNumber"));
 
+        this.vm_type_name=new String[vmTypesNumber];
         String parameter = "";
         String vmTypeName = "";
 
-        // InterArrival Time
+        // VM_Types
         for (int i = 0; i < vmTypesNumber; i++) {
-            parameter = "vmType_" + i;
+            parameter = "vm_type_" + i;
             vmTypeName = String.valueOf((String) property.getProperty(parameter));
-            vmTypesNames.add(vmTypeName);
+            vm_type_name[i]=vmTypeName;
         }
+        
+        
+        //HOST Resources
+        parameter = "cpu_host";
+        cpu_host = Double.valueOf((String) property.getProperty(parameter));
+        parameter = "memory_host";
+        memory_host = Double.valueOf((String) property.getProperty(parameter));
+        parameter = "storage_host";
+        storage_host = Double.valueOf((String) property.getProperty(parameter));
+        parameter = "bandwidth_host";
+        bandwidth_host = Double.valueOf((String) property.getProperty(parameter));
+
+        // VM CPU
+        parameter = "cpu_small_vm";
+        vm_cpu[0] = Double.valueOf((String) property.getProperty(parameter));
+        parameter = "cpu_medium_vm";
+        vm_cpu[1] = Double.valueOf((String) property.getProperty(parameter));
+        parameter = "cpu_large_vm";
+        vm_cpu[2] = Double.valueOf((String) property.getProperty(parameter));
+
+        // VM MEMORY
+        parameter = "memory_small_vm";
+        vm_memory[0] = Double.valueOf((String) property.getProperty(parameter));
+        parameter = "memory_medium_vm";
+        vm_memory[1] = Double.valueOf((String) property.getProperty(parameter));
+        parameter = "memory_large_vm";
+        vm_memory[2] = Double.valueOf((String) property.getProperty(parameter));
+
+        // VM STORAGE 
+        parameter = "storage_small_vm";
+        vm_storage[0] = Double.valueOf((String) property.getProperty(parameter));
+        parameter = "storage_medium_vm";
+        vm_storage[1] = Double.valueOf((String) property.getProperty(parameter));
+        parameter = "storage_large_vm";
+        vm_storage[2] = Double.valueOf((String) property.getProperty(parameter));
+
+        // VM BANDWIDTH
+        parameter = "bandwidth_small_vm";
+        vm_bandwidth[0] = Double.valueOf((String) property.getProperty(parameter));
+        parameter = "bandwidth_medium_vm";
+        vm_bandwidth[1] = Double.valueOf((String) property.getProperty(parameter));
+        parameter = "bandwidth_large_vm";
+        vm_bandwidth[2] = Double.valueOf((String) property.getProperty(parameter));
 
     }
 
-    private void loadProperties(String algorithm,int simulationID, int runID) {
-
-        Properties property = new Properties();
-
-        try {
-            String filename = "simulation.properties";
-            InputStream input = Configuration.class.getClassLoader().getResourceAsStream(filename);
-
-            // load a properties file
-            property.load(input);
-
-            this.simulationID = simulationID;
-            this.runID = runID;
-            this.algorithm = algorithm;
-            
-            
-            providersNumber = Integer.valueOf(property.getProperty("providers"));
-            numberOfSlots = Integer.valueOf(property.getProperty("slots"));
-            nitosServer = String.valueOf(property.getProperty("server"));
-            
-            slotDuration = Integer.valueOf(property.getProperty("slotDuration"));
-            slotDurationMetric = String.valueOf(property.getProperty("slotDurationMetric"));
-            numberOfMachineStatsPerSlot = Integer.valueOf(property.getProperty("numberOfMachineStatsPerSlot"));
-            machineResourcesNumber = Integer.valueOf(property.getProperty("machineResourcesNumber"));
-           // abRequestsNumber=Integer.valueOf(property.getProperty("abRequestsNumber"));
-            //   abBatchRequestsNumber=Integer.valueOf(property.getProperty("abBatchRequestsNumber"));
-            omega = Double.valueOf(property.getProperty("omega"));
-            cloudVM_number = Integer.valueOf(property.getProperty("cloudVM_number"));
-            servicesNumber = Integer.valueOf(property.getProperty("servicesNumber"));
-            statsUpdateMethod = String.valueOf(property.getProperty("stats_updateMethod"));
-
-            priceBase = Double.valueOf(property.getProperty("priceBase"));
-            skipWebClientStats= Integer.valueOf(property.getProperty("skipWebClientStats"));
-        } catch (Exception e) {
-            System.out.println(e.toString());
-        }
-
-    }
-
+ 
    
-    private void loadProperties() {
+    private void loadSimProperties() {
 
         Properties property = new Properties();
 
@@ -263,28 +226,24 @@ public class Configuration {
             
             providersNumber = Integer.valueOf(property.getProperty("providers"));
             numberOfSlots = Integer.valueOf(property.getProperty("slots"));
-            nitosServer = String.valueOf(property.getProperty("server"));
+          
             
             slotDuration = Integer.valueOf(property.getProperty("slotDuration"));
             slotDurationMetric = String.valueOf(property.getProperty("slotDurationMetric"));
             numberOfMachineStatsPerSlot = Integer.valueOf(property.getProperty("numberOfMachineStatsPerSlot"));
-            machineResourcesNumber = Integer.valueOf(property.getProperty("machineResourcesNumber"));
-           // abRequestsNumber=Integer.valueOf(property.getProperty("abRequestsNumber"));
-            //   abBatchRequestsNumber=Integer.valueOf(property.getProperty("abBatchRequestsNumber"));
+           
             omega = Double.valueOf(property.getProperty("omega"));
             cloudVM_number = Integer.valueOf(property.getProperty("cloudVM_number"));
             servicesNumber = Integer.valueOf(property.getProperty("servicesNumber"));
             statsUpdateMethod = String.valueOf(property.getProperty("stats_updateMethod"));
-
-            priceBase = Double.valueOf(property.getProperty("priceBase"));
-            skipWebClientStats= Integer.valueOf(property.getProperty("skipWebClientStats"));
+            
         } catch (Exception e) {
             System.out.println(e.toString());
         }
 
     }
 
-    private void loadFairnessWeights() {
+    private void loadCplexParameters() {
 
         phiWeight = new double[providersNumber];
 
@@ -295,102 +254,18 @@ public class Configuration {
         input = Configuration.class.getClassLoader().getResourceAsStream(filename);
 
         try {
-            // load a properties file
-            property.load(input);
+            property.load(input); // load a properties file
         } catch (IOException ex) {
             Logger.getLogger(Configuration.class.getName()).log(Level.SEVERE, null, ex);
         }
 
+        priceBase = Double.valueOf(property.getProperty("priceBase"));
+        
         for (int i = 0; i < providersNumber; i++) {
             parameter = "phiWeight_" + i;
             phiWeight[i] = Double.valueOf((String) property.getProperty(parameter));
         }
-
-    }
-
-    private void loadResources() {
-
-        cpu_VM = new double[vmTypesNumber];
-        memory_VM = new double[vmTypesNumber];
-        storage_VM = new double[vmTypesNumber];
-        bandwidth_VM = new double[vmTypesNumber];
-
-        Properties property = new Properties();
-        InputStream input = null;
-        String filename = "simulation.properties";
-        String parameter = "";
-        input = Configuration.class.getClassLoader().getResourceAsStream(filename);
-
-        try {
-            // load a properties file
-            property.load(input);
-        } catch (IOException ex) {
-            Logger.getLogger(Configuration.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        //HOST Resources
-        parameter = "cpu_host";
-        cpu_host = Double.valueOf((String) property.getProperty(parameter));
-        parameter = "memory_host";
-        memory_host = Double.valueOf((String) property.getProperty(parameter));
-        parameter = "storage_host";
-        storage_host = Double.valueOf((String) property.getProperty(parameter));
-        parameter = "bandwidth_host";
-        bandwidth_host = Double.valueOf((String) property.getProperty(parameter));
-
-        // VM Resources
-        // CPU
-        parameter = "cpu_SmallVM";
-        cpu_VM[0] = Double.valueOf((String) property.getProperty(parameter));
-        parameter = "cpu_MediumVM";
-        cpu_VM[1] = Double.valueOf((String) property.getProperty(parameter));
-        parameter = "cpu_LargeVM";
-        cpu_VM[2] = Double.valueOf((String) property.getProperty(parameter));
-
-        // MEMORY
-        parameter = "memory_SmallVM";
-        memory_VM[0] = Double.valueOf((String) property.getProperty(parameter));
-        parameter = "memory_MediumVM";
-        memory_VM[1] = Double.valueOf((String) property.getProperty(parameter));
-        parameter = "memory_LargeVM";
-        memory_VM[2] = Double.valueOf((String) property.getProperty(parameter));
-
-        // Storage
-        parameter = "storage_SmallVM";
-        storage_VM[0] = Double.valueOf((String) property.getProperty(parameter));
-        parameter = "storage_MediumVM";
-        storage_VM[1] = Double.valueOf((String) property.getProperty(parameter));
-        parameter = "storage_LargeVM";
-        storage_VM[2] = Double.valueOf((String) property.getProperty(parameter));
-
-        // Bandwidth
-        parameter = "bandwidth_SmallVM";
-        bandwidth_VM[0] = Double.valueOf((String) property.getProperty(parameter));
-        parameter = "bandwidth_MediumVM";
-        bandwidth_VM[1] = Double.valueOf((String) property.getProperty(parameter));
-        parameter = "bandwidth_LargeVM";
-        bandwidth_VM[2] = Double.valueOf((String) property.getProperty(parameter));
-
-    }
-
-    private void loadPenalties() {
-
-        Properties property = new Properties();
-        InputStream input = null;
-        String filename = "simulation.properties";
-
-        input = Configuration.class.getClassLoader().getResourceAsStream(filename);
-
-        penalty = new double[providersNumber][servicesNumber];
-
-        try {
-            property.load(input);
-        } catch (IOException ex) {
-            Logger.getLogger(Configuration.class.getName()).log(Level.SEVERE, null, ex);
-        }
-
-        String parameter = "";
-
+        
         for (int i = 0; i < providersNumber; i++) {
             for (int j = 0; j < servicesNumber; j++) {
                 parameter = "penalty_p" + i + "_s" + j;
@@ -398,7 +273,33 @@ public class Configuration {
             }
 
         }
+
     }
+
+    public int getVnfNumber(int provideID){
+    	 Properties property = new Properties();
+         InputStream input = null;
+         String filename = "provider.properties";
+         String parameter = "";
+         input = Configuration.class.getClassLoader().getResourceAsStream(filename);
+
+         int vnfNumber=0;
+         try {
+             // load a properties file
+             property.load(input);
+             parameter = "provider" + provideID + "_servicesNumber";
+             vnfNumber=Integer.valueOf((String) property.getProperty(parameter));
+         } catch (IOException ex) {
+             Logger.getLogger(Configuration.class.getName()).log(Level.SEVERE, null, ex);
+         }
+    
+    	return vnfNumber;
+    }
+    
+    
+   
+
+
 
     private void loadExternalCloudParameters() {
 
@@ -501,19 +402,19 @@ public class Configuration {
     }
 
     public double[] getCpu_VM() {
-        return cpu_VM;
+        return vm_cpu;
     }
 
     public double[] getMemory_VM() {
-        return memory_VM;
+        return vm_memory;
     }
 
     public double[] getStorage_VM() {
-        return storage_VM;
+        return vm_storage;
     }
 
     public double[] getBandwidth_VM() {
-        return bandwidth_VM;
+        return vm_bandwidth;
     }
 
     public double getCpu_host() {

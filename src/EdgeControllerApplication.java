@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import Controller.Simulator;
+import Enumerators.EAlgorithms;
 
 /**
  *
@@ -37,8 +38,8 @@ public class EdgeControllerApplication {
         
         	simulationID=1;
             runID=1;
-               
-            simulator=new Simulator("FFRR",simulationID,runID);
+            algorithm= EAlgorithms.Lyapunov.toString();   
+            simulator=new Simulator(algorithm,simulationID,runID);
             simulator.StartExperiment();
         }
      
