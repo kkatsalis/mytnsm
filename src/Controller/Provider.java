@@ -34,18 +34,17 @@ public class Provider {
 	public Provider(int providerID, Configuration config) {
 		this.providerID = providerID;
 		this._config = config;
-		this.vnfNumber = config.getVnfNumber(this.providerID);
 		requestsForService = new ArrayList<ServiceRequestRates>();
 
 		initializeVnfArrivalRateGenerators();
-		initializeVnfLifeTimeGenerators();
+		initializeServiceLifeTimeGenerators();
 	}
 
 	public List<ServiceRequestRates> getRequestsForService() {
 		return requestsForService;
 	}
 
-	private void initializeVnfLifeTimeGenerators() {
+	private void initializeServiceLifeTimeGenerators() {
 
 		// Lifetime of VM one per provider
 		_lifetimeExponentialGenerator = new Exponential[_config.getServicesNumber()];

@@ -74,7 +74,7 @@ public class Simulator {
 
     public Simulator(String algorithm, int simulatorID, int runID) {
 
-        this._config = new Configuration(algorithm, simulatorID, runID);
+        this._config = new Configuration();
         this._hostNames = _config.getHostNames();
         this._clientNames = _config.getClientNames();
         this.controllerTimer = new Timer();
