@@ -10,81 +10,57 @@ package Controller;
  * @author kostas
  */
 public class ServiceRequest {
-   
-    static int id=100;
-   
-    int providerID;
-    int serviceRequestID;
-    int slotStart;
-    int slotEnd;
-    String serviceName;
-    int serviceID;
-    int lifetime;     //in Slots
-   
-   
-    public ServiceRequest( int providerID, int serviceID, int lifetime, String serviceName) {
-        
-        this.providerID = providerID;
-        this.lifetime=lifetime;
-        this.serviceID=serviceID;
-        this.serviceName=serviceName;
-        id++;
-        this.serviceRequestID=id;
-    
-    }
 
-    public int getServiceID() {
-        return serviceID;
-    }
-    
-    
-    public int getProviderID() {
-        return providerID;
-    }
+	static int requestId = 0;
 
-    public int getServiceRequestID() {
-        return serviceRequestID;
-    }
-    
+	int slotStart;
+	int slotEnd;
 
+	int providerID;
+	int serviceID;
+	int lifetime; // in Slots
 
-    public int getSlotStart() {
-        return slotStart;
-    }
+	public ServiceRequest(int providerID, int serviceID, int lifetime) {
 
-    public void setSlotStart(int slotStart) {
-        this.slotStart = slotStart;
-    }
+		this.providerID = providerID;
+		this.lifetime = lifetime;
+		this.serviceID = serviceID;
 
-    public int getSlotEnd() {
-        return slotEnd;
-    }
+		requestId++;
 
-    public void setSlotRemove(int slotEnd) {
-        this.slotEnd = slotEnd;
-    }
+	}
 
-   
+	public int getServiceID() {
+		return serviceID;
+	}
 
-    public String getServiceName() {
-        return serviceName;
-    }
+	public int getProviderID() {
+		return providerID;
+	}
 
- 
+	public int getSlotStart() {
+		return slotStart;
+	}
 
-    public int getLifetime() {
-        return lifetime;
-    }
+	public void setSlotStart(int slotStart) {
+		this.slotStart = slotStart;
+	}
 
-    
-    
-    
-   
+	public int getSlotEnd() {
+		return slotEnd;
+	}
 
-    
+	public void setSlotEnd(int slotEnd) {
+		this.slotEnd = slotEnd;
+	}
 
-    
-    
-    
+	public int getLifetime() {
+		return lifetime;
+	}
+
+	public int getRequestId() {
+		return requestId;
+	}
+
 
 }

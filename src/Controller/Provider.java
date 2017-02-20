@@ -19,104 +19,143 @@ import jsc.distributions.Pareto;
 public class Provider {
 
 	int providerID;
-	int vnfNumber;
 	Configuration _config;
+
 	// How to create requests per VNF, one per provider [] []
-	Exponential[] _rateExponentialGenerator;
-	Pareto[] _rateParetoGenerator;
+	Exponential[] _arrivalExpGenerator;
+	Pareto[] __arrivalParetoGenerator;
 
 	// Lifetime of VNF one per provider
 	Exponential[] _lifetimeExponentialGenerator;
 	Pareto[] _lifetimeParetoGenerator;
 
-	List<ServiceRequestRates> requestsForService;
+	int arrivals_min[];
+	int arrivals_max[];
+	int lifetime_min[];
+	int lifetime_max[];
+
+	List<ServiceRequest> requestsForService;
 
 	public Provider(int providerID, Configuration config) {
 		this.providerID = providerID;
 		this._config = config;
-		requestsForService = new ArrayList<ServiceRequestRates>();
+		requestsForService = new ArrayList<ServiceRequest>();
 
-		initializeVnfArrivalRateGenerators();
-		initializeServiceLifeTimeGenerators();
+		initializeArrivalsGenerators();
+		initializeLifeTimeGenerators();
 	}
 
-	public List<ServiceRequestRates> getRequestsForService() {
+	public List<ServiceRequest> getRequestsForService() {
 		return requestsForService;
 	}
 
-	private void initializeServiceLifeTimeGenerators() {
+	private void initializeLifeTimeGenerators() {
 
+		int services_number = _config.getServices_number();
 		// Lifetime of VM one per provider
-		_lifetimeExponentialGenerator = new Exponential[_config.getServicesNumber()];
-		_lifetimeParetoGenerator = new Pareto[_config.getServicesNumber()];
+		_lifetimeExponentialGenerator = new Exponential[services_number];
+		_lifetimeParetoGenerator = new Pareto[services_number];
 
 		String lifetimeType = "";
-		String parameter = "";
 		double lamda;
 		double location;
 		double shape;
 
-		for (int s = 0; s < vnfNumber; s++) {
-			parameter = "provider" + providerID + "_service" + s + "_lifetimeType";
-			lifetimeType = String.valueOf(requestsForService.get(s).getLifeTimeConfig().get(parameter));
+		for (int s = 0; s < services_number; s++) {
+
+			lifetimeType = (String) _config.getLifetime_generator()[providerID][s].get("lifetime_type");
 
 			if (lifetimeType.equals(EGeneratorType.Exponential.toString())) {
 
-				parameter = "_service" + s + "_lifetime_lamda";
-				lamda = Double.valueOf(String.valueOf(requestsForService.get(s).getLifeTimeConfig().get(parameter)));
+				lamda = Double.valueOf((String) _config.getLifetime_generator()[providerID][s].get("lifetime_lamda"));
 				_lifetimeExponentialGenerator[s] = new Exponential(lamda);
 
 			} else if (lifetimeType.equals(EGeneratorType.Pareto.toString())) {
 
-				parameter = "provider" + providerID + "_service" + s + "_lifetime_location";
-				location = Double.valueOf(String.valueOf(requestsForService.get(s).getLifeTimeConfig().get(parameter)));
-				parameter = "provider" + providerID + "_service" + s + "_lifetime_shape";
-				shape = Double.valueOf(String.valueOf(requestsForService.get(s).getLifeTimeConfig().get(parameter)));
+				location = Double
+						.valueOf((String) _config.getLifetime_generator()[providerID][s].get("lifetime_location"));
+				shape = Double.valueOf((String) _config.getLifetime_generator()[providerID][s].get("lifetime_shape"));
+				_lifetimeParetoGenerator[s] = new Pareto(location, shape);
 
-				_lifetimeParetoGenerator[s] = new Pareto(location, shape); // Dummy
-																			// object
 			}
+			lifetime_min[s] = Integer.valueOf((String) _config.getLifetime_generator()[providerID][s].get("lifetime_min"));
+			lifetime_max[s] = Integer.valueOf((String) _config.getLifetime_generator()[providerID][s].get("lifetime_max"));
 
 		}
 
 	}
 
-	private void initializeVnfArrivalRateGenerators() {
+	private void initializeArrivalsGenerators() {
 
+		int services_number = _config.getServices_number();
 		// How to create requests per Service, one per provider
-		_rateExponentialGenerator = new Exponential[_config.getServicesNumber()];
-		_rateParetoGenerator = new Pareto[_config.getServicesNumber()];
+		_arrivalExpGenerator = new Exponential[services_number];
+		__arrivalParetoGenerator = new Pareto[services_number];
 
-		String rateType = "";
-		String parameter = "";
+		String arrivalsType = "";
 		double lamda;
 		double location;
 		double shape;
 
-		for (int s = 0; s < vnfNumber; s++) {
-			parameter = "provider" + providerID + "_service" + s + "_RateType";
-			rateType = String.valueOf(requestsForService.get(s).getRequestRateConfig().get(parameter));
+		for (int s = 0; s < services_number; s++) {
 
-			if (rateType.equals(EGeneratorType.Exponential.toString())) {
+			arrivalsType = (String) _config.getArrivals_generator()[providerID][s].get("arrivals_type");
 
-				parameter = "provider" + providerID + "_service" + s + "_rate_lamda";
-				lamda = Double.valueOf(String.valueOf(requestsForService.get(s).getRequestRateConfig().get(parameter)));
-				_rateExponentialGenerator[s] = new Exponential(lamda);
+			if (arrivalsType.equals(EGeneratorType.Exponential.toString())) {
 
-			} else if (rateType.equals(EGeneratorType.Pareto.toString())) {
+				lamda = Double.valueOf((String) _config.getArrivals_generator()[providerID][s].get("arrivals_lamda"));
+				_lifetimeExponentialGenerator[s] = new Exponential(lamda);
 
-				parameter = "provider" + providerID + "_service" + s + "_rate_location";
+			} else if (arrivalsType.equals(EGeneratorType.Pareto.toString())) {
+
 				location = Double
-						.valueOf(String.valueOf(requestsForService.get(s).getRequestRateConfig().get(parameter)));
-				parameter = "provider" + providerID + "_service" + s + "_rate_shape";
-				shape = Double.valueOf(String.valueOf(requestsForService.get(s).getRequestRateConfig().get(parameter)));
-
-				_rateParetoGenerator[s] = new Pareto(location, shape); // Dummy
-																		// object
+						.valueOf((String) _config.getArrivals_generator()[providerID][s].get("arrivals_location"));
+				shape = Double.valueOf((String) _config.getArrivals_generator()[providerID][s].get("arrivals_shape"));
+				_lifetimeParetoGenerator[s] = new Pareto(location, shape);
 			}
+			arrivals_min[s] = Integer.valueOf((String) _config.getArrivals_generator()[providerID][s].get("arrivals_min"));
+			arrivals_max[s] = Integer.valueOf((String) _config.getArrivals_generator()[providerID][s].get("arrivals_max"));
 
 		}
 
 	}
+
+	public Exponential[] get_arrivalsExpGenerator() {
+		return _arrivalExpGenerator;
+	}
+
+	public Pareto[] get__arrivalsParetoGenerator() {
+		return __arrivalParetoGenerator;
+	}
+
+	public Exponential[] get_lifetimeExponentialGenerator() {
+		return _lifetimeExponentialGenerator;
+	}
+
+	public Pareto[] get_lifetimeParetoGenerator() {
+		return _lifetimeParetoGenerator;
+	}
+
+	public int[] getArrivals_min() {
+		return arrivals_min;
+	}
+
+	public int[] getArrivals_max() {
+		return arrivals_max;
+	}
+
+	public int[] getLifetime_min() {
+		return lifetime_min;
+	}
+
+	public int[] getLifetime_max() {
+		return lifetime_max;
+	}
+
+	public void setRequestsForService(List<ServiceRequest> requestsForService) {
+		this.requestsForService = requestsForService;
+	}
+	
+	
 
 }

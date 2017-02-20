@@ -17,57 +17,69 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class Host {
 
-    int hostID;
     Configuration _config;
-    String _nodeName;
+    
+    int hostID;
+    String ip;
+    int cpu;
+    int memory;
+    int storage;
+    int bandwidth;
+    
+    HostStats _hostStats; // A number of measurements is taken for every Host per Slot
     
     CopyOnWriteArrayList<VM> _VMs;    // A list with VMs per Host Machine;
     
-    HostStats _hostStats; // A number of measurements is taken for every Host per Slot
-    Resources _resources;
-    
-    public Host(int hostId,Configuration config,String nodeName) {
+    public Host(int hostId,Configuration config) {
         
         this.hostID=hostId;
         this._config=config;
-        this._nodeName=nodeName;
-    
+        this.ip=String.valueOf(_config.host_machine_config[hostId].get("ip"));
+        this.cpu=Integer.valueOf((String)_config.host_machine_config[hostId].get("cpu"));
+        this.memory=Integer.valueOf((String)_config.host_machine_config[hostId].get("memory"));  
+        this.storage=Integer.valueOf((String)_config.host_machine_config[hostId].get("storage"));
+        this.bandwidth=Integer.valueOf((String)_config.host_machine_config[hostId].get("bandwidth"));
+        
+        
+        this._hostStats=new HostStats(); 
         this._VMs=new CopyOnWriteArrayList<>();     // A list with VMs per Host Machine;
-        this._resources=new Resources();
-        
-        loadResourcesSpecification();
     }
+
+	public int getHostID() {
+		return hostID;
+	}
+
+	public String getIp() {
+		return ip;
+	}
+
+	public int getCpu() {
+		return cpu;
+	}
+
+	public int getMemory() {
+		return memory;
+	}
+
+	public int getStorage() {
+		return storage;
+	}
+
+	public int getBandwidth() {
+		return bandwidth;
+	}
+
+	public HostStats get_hostStats() {
+		return _hostStats;
+	}
+
+	public CopyOnWriteArrayList<VM> get_VMs() {
+		return _VMs;
+	}
 
     
     
     
-    public void createNewStatsObject(){
-        this._hostStats=new HostStats();
-    }
-    public String getNodeName() {
-        return _nodeName;
-    }
-
-    public HostStats getHostStats() {
-        return _hostStats;
-    }
-
-    public CopyOnWriteArrayList<VM> getVMs() {
-        return _VMs;
-    }
-
-    public int getHostID() {
-        return hostID;
-    }
-
-    private void loadResourcesSpecification() {
-        
-        _resources.setCpu(_config.getCpu_host());
-        _resources.setMemory(_config.getMemory_host());
-        _resources.setStorage(_config.getStorage_host());
-        _resources.setBandwidth(_config.getBandwidth_host());
-        
-    }
 
     
     
