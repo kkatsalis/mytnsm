@@ -53,19 +53,7 @@ public class Utilities {
 
     }
 
-    public static List<VMRequest> findVMequests2RemoveThisSlot(int slot, Slot[] _slots, Configuration _config) {
 
-        List<VMRequest> vmRequests2RemoveThisSlot = new ArrayList<>();
-
-        // Step 1: Find RequestIDs to remove
-        for (int i = 0; i < _config.getProvidersNumber(); i++) {
-            for (int j = 0; j < _slots[slot].getVmRequests2Remove()[i].size(); j++) {
-                vmRequests2RemoveThisSlot.add(_slots[slot].getVmRequests2Remove()[i].get(j));
-            }
-        }
-
-        return vmRequests2RemoveThisSlot;
-    }
 
     public static List<VMRequest> vmRequests2ActivateThisSlot(int slot, Slot[] _slots, Configuration _config) {
 

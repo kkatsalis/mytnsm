@@ -11,10 +11,10 @@ import Enumerators.ESlotDurationMetric;
 import Statistics.ABStats;
 import Statistics.DBClass;
 import Statistics.DBUtilities;
-import Statistics.WebRequestStats;
 import Statistics.WebRequestStatsSlot;
 
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
 import jsc.distributions.Exponential;
@@ -45,7 +45,7 @@ public class Simulator {
 	Configuration _config;
 	int providers_number;
 	int services_number;
-	
+
 	List<String> _hostNames;
 	List<String> _clientNames;
 
@@ -60,15 +60,16 @@ public class Simulator {
 
 	Timer controllerTimer;
 	WebUtilities _webUtility;
-	Provider[] _provider;
-	WebRequestStatsSlot[][][] _webRequestStatsSlot;
+	Provider[] _providers;
+
+	List<String> _remote_machine_ips;
 
 	public Simulator(String algorithm, int simulatorID, int runID) {
 
 		this._config = new Configuration();
-		this.providers_number=_config.getProviders_number();
-		this.services_number =_config.getServices_number();
-		
+		this.providers_number = _config.getProviders_number();
+		this.services_number = _config.getServices_number();
+
 		this.controllerTimer = new Timer();
 
 		this._webUtility = new WebUtilities(_config);
@@ -76,9 +77,8 @@ public class Simulator {
 		System.out.println("********** System Initialization Phase ****************");
 
 		initializeSimulationObjects(); // creates: Hosts, Clients, Slots
-		initiliazeWebRequestStats();
 
-		this._controller = new Controller(_hosts, _webClients, _config, _slots, _dbUtilities, _provider);
+		this._controller = new Controller(_config, _hosts, _slots, _providers);
 
 		addInitialServiceRequestEvents();
 
@@ -91,32 +91,33 @@ public class Simulator {
 
 		Random rand = new Random();
 
-		// ----------Initialize Slots 
+		// ----------Initialize Slots
 		// in every sclot there is a list of events to occur
-		_slots = new Slot[_config.getSlots()];
-		for (int i = 0; i < _config.getSlots(); i++) {
+		_slots = new Slot[_config.getSlotsNumber()];
+		for (int i = 0; i < _config.getSlotsNumber(); i++) {
 			_slots[i] = new Slot(i, _config);
 
 		}
 		System.out.println("Initialization: Slot Objects Ready");
 
-//		for (int i = 0; i < _slots.length; i++) {
-//			System.out.println("---------------- SLOT " + i + " -----------------------------");
-//			for (int p = 0; p < _config.providers_number; p++) {
-//				for (ServiceRequest e : _slots[i].getServiceRequests2Activate()[p]) {
-//					System.out.println("Create: " + e.getRequestId());
-//				}
-//				for (ServiceRequest e : _slots[i].getServiceRequests2Remove()[p]) {
-//					System.out.println("Delete: " + e.getRequestId());
-//				}
-//				System.out.println("");
-//			}
-//		}
+		// for (int i = 0; i < _slots.length; i++) {
+		// System.out.println("---------------- SLOT " + i + "
+		// -----------------------------");
+		// for (int p = 0; p < _config.providers_number; p++) {
+		// for (ServiceRequest e : _slots[i].getServiceRequests2Activate()[p]) {
+		// System.out.println("Create: " + e.getRequestId());
+		// }
+		// for (ServiceRequest e : _slots[i].getServiceRequests2Remove()[p]) {
+		// System.out.println("Delete: " + e.getRequestId());
+		// }
+		// System.out.println("");
+		// }
+		// }
 
 		// ---------- Initialize providers
-		_provider = new Provider[_config.getProviders_number()];
-		for (int i = 0; i < _config.getProviders_number(); i++) {
-			_provider[i] = new Provider(i, _config);
+		_providers = new Provider[providers_number];
+		for (int p = 0; p < providers_number; p++) {
+			_providers[p] = new Provider(p, _config);
 		}
 		System.out.println("Initialization: Provider Objects Ready");
 
@@ -127,31 +128,33 @@ public class Simulator {
 		}
 		System.out.println("Initialization: Host Objects Ready");
 
+		// Clone Remote Cloud information
+
+		_remote_machine_ips = new ArrayList<>();
+		String ip = "";
+		for (int i = 0; i < _config.getRemote_machines_number(); i++) {
+			ip = (String) _config.getRemote_machine_config()[i].get("ip");
+			_remote_machine_ips.add(ip);
+		}
+
 	}
 
 	private void addInitialServiceRequestEvents() {
 
 		int runningSlot = 0;
-		
-		
-		// add one request for every service in slot 0
 
-		for (int p = 0; providers_number < ; p++) {
-			for (int s = 0; services_number < ; s++) {
-
+		for (int p = 0; p < providers_number; p++) {
+			for (int s = 0; s < services_number; s++) {
 				if (!_config.getArrivals_generator()[p][s].isEmpty())
 					CreateNewServiceRequest(p, s, runningSlot, true);
 
 				runningSlot = 0;
 
-				while (runningSlot < _config.getSlots()) {
+				while (runningSlot < _config.getSlotsNumber()) {
 					runningSlot = CreateNewServiceRequest(p, s, runningSlot, false);
 				}
 			}
 		}
-
-		System.out.println("Initialization: Added initial requests pattern");
-
 	}
 
 	// Returns the new running slot (this can be also 0)
@@ -173,14 +176,14 @@ public class Simulator {
 		slot2AddService = currentSlot + slots_away;
 		slot2RemoveService = slot2AddService + lifetime;
 
-		ServiceRequest newServiceRequest = new ServiceRequest(providerID, serviceID, lifetime);
+		ServiceRequest newServiceRequest = new ServiceRequest(_config,providerID, serviceID, lifetime);
 
 		newServiceRequest.setSlotStart(slot2AddService);
 		newServiceRequest.setSlotEnd(slot2RemoveService);
 
 		_slots[slot2AddService].getServiceRequests2Activate()[providerID].add(newServiceRequest);
 
-		if (slot2RemoveService < _config.getSlots()) {
+		if (slot2RemoveService < _config.getSlotsNumber()) {
 			_slots[slot2RemoveService].getServiceRequests2Remove()[providerID].add(newServiceRequest);
 		}
 
@@ -200,19 +203,18 @@ public class Simulator {
 		switch (EGeneratorType.valueOf(arrivalsType)) {
 
 		case Exponential:
-			value = _provider[providerID].get_arrivalsExpGenerator()[serviceID].random();
+			value = _providers[providerID].get_arrivalsExpGenerator()[serviceID].random();
 			interArrivalTime = value.intValue();
 			break;
 
 		case Pareto:
-			value = _provider[providerID].get__arrivalsParetoGenerator()[serviceID].random();
+			value = _providers[providerID].get__arrivalsParetoGenerator()[serviceID].random();
 			interArrivalTime = value.intValue();
 			break;
 
 		case Random:
-			min = _provider[providerID].getArrivals_min()[serviceID];
-			max = _provider[providerID].getArrivals_max()[serviceID];
-
+			min = _providers[providerID].getArrivals_min()[serviceID];
+			max = _providers[providerID].getArrivals_max()[serviceID];
 			interArrivalTime = Utilities.randInt(min, max);
 			break;
 
@@ -235,19 +237,19 @@ public class Simulator {
 
 		switch (EGeneratorType.valueOf(lifetime_type)) {
 		case Exponential:
-			value = _provider[providerID].get_lifetimeExponentialGenerator()[serviceID].random();
+			value = _providers[providerID].get_lifetimeExponentialGenerator()[serviceID].random();
 			lifetime = value.intValue();
 			break;
 
 		case Pareto:
-			value = _provider[providerID].get_lifetimeParetoGenerator()[serviceID].random();
+			value = _providers[providerID].get_lifetimeParetoGenerator()[serviceID].random();
 			lifetime = value.intValue();
 			break;
 
 		case Random:
 
-			min = _provider[providerID].getLifetime_min()[serviceID];
-			max = _provider[providerID].getLifetime_max()[serviceID];
+			min = _providers[providerID].getLifetime_min()[serviceID];
+			max = _providers[providerID].getLifetime_max()[serviceID];
 			lifetime = Utilities.randInt(min, max);
 			break;
 
@@ -276,99 +278,24 @@ public class Simulator {
 		} else if (_config.getSlotDurationMetric().equals(ESlotDurationMetric.hours.toString())) {
 			controllerTimer.scheduleAtFixedRate(new RunSlot(), 0, 3600 * duration * 1000);
 		}
-
-	}
-
-	private void initiliazeWebRequestStats() {
-
-		this._webRequestStatsSlot = new WebRequestStatsSlot[_config.getSlots()][providers_number][services_number];
-
-		for (int i = 0; i < _config.getSlots(); i++) {
-			for (int p = 0; p < providers_number; p++) {
-				for (int s = 0; s < services_number; s++) {
-					_webRequestStatsSlot[i][p][s] = new WebRequestStatsSlot();
-				}
-			}
-		}
 	}
 
 	// Algorithm: Choose a VM in the hosting Node else choose at Random
-	private String chooseVMforService(int serviceID, int providerID, String webClient) {
-
-		String vmIP = "";
-		String hostApName = "";
-		Random random = new Random();
-
-		// Step 1: Find the hosting node
-		for (int i = 0; i < _webClients.length; i++) {
-			if (_webClients[i].getClientName().equals(webClient)) {
-				hostApName = _webClients[i].getApName();
-			}
-		}
-
-		// Step 2: Find all the VMs that can be used
-		try {
-
-			CopyOnWriteArrayList<VM> potentialVMs = new CopyOnWriteArrayList<>();
-
-			for (Host _host : _hosts) {
-				for (Iterator iterator = _host.getVMs().iterator(); iterator.hasNext();) {
-					VM nextVM = (VM) iterator.next();
-
-					if (nextVM.isActive() & nextVM.getProviderID() == providerID & nextVM.getServiceID() == serviceID) {
-						potentialVMs.add(nextVM);
-					}
-				}
-			}
-
-			if (potentialVMs.size() > 0) {
-				vmIP = potentialVMs.get(random.nextInt(potentialVMs.size())).getIp();
-				return vmIP;
-
-			} else if (potentialVMs.isEmpty()) {
-				return _config.getCloudVM_IPs().get(random.nextInt(_config.getCloudVM_IPs().size()));
-			}
-
-			// //Step 3: Find the local VM
-			// for (Iterator iterator = potentialVMs.iterator();
-			// iterator.hasNext();) {
-			// VM nextVM = (VM)iterator.next();
-			//
-			// if(hostApName.equals(nextVM.getHostname()))
-			// vmIP=nextVM.getIp();
-			// }
-		} catch (Exception e) {
-			System.out.println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-			System.out.println(e);
-			System.exit(0);
-		}
-
-		return null;
-
-	}
-
 	class RunSlot extends TimerTask {
 
 		public void run() {
 
 			try {
-				if (slot < _config.getSlots()) {
+				if (slot < _config.getSlotsNumber()) {
 
-					_controller.updateServiceRequestPattern(_webRequestPattern, slot);
 					_controller.Run(slot);
-
-					_dbUtilities.updateWebClientStatistics2DBPerSlot(slot, _webRequestStatsSlot);
 					slot++;
-
 				} else {
 					experimentStop = System.currentTimeMillis();
 					controllerTimer.cancel();
-
-					_db.getOmlclient().close();
 					System.exit(0);
 				}
 			} catch (IOException ex) {
-				_db.getOmlclient().close();
 				Logger.getLogger(Simulator.class.getName()).log(Level.SEVERE, null, ex);
 			}
 

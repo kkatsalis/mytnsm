@@ -149,7 +149,7 @@ public class SchedulerData {
     public double ksi(int s, int j, int v)
     {
         
-        double xi=config.getXi()[j][v][s];
+        double xi=config.getXi()[v][s];
             
         return xi;
          

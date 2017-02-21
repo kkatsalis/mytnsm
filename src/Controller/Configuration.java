@@ -311,7 +311,7 @@ public class Configuration {
 
 				parameter = "remote_machine_ip_" + String.valueOf(i);
 				svalue = String.valueOf((String) property.getProperty(parameter));
-				remote_machine_config[i].put("remote_machine_ip", svalue);
+				remote_machine_config[i].put("ip", svalue);
 			}
 
 			// Local Cloud Hosts
@@ -389,7 +389,7 @@ public class Configuration {
 		return algorithm;
 	}
 
-	public int getSlots() {
+	public int getSlotsNumber() {
 		return slots;
 	}
 
