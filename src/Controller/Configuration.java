@@ -34,8 +34,10 @@ public class Configuration {
 
 	// ======= Statistics ==========
 
-	int numberOfMachineStatsPerSlot;
-
+	int number_of_machine_stats_per_slot;
+    String web_stats_update_method; //cumulative_moving_average or simple_moving_average or weighted_moving_average or exponential_moving_average
+    int slots_window;
+    
 	// ========= Remote Cloud Machines==========
 	int remote_machines_number;
 	@SuppressWarnings("rawtypes")
@@ -51,8 +53,10 @@ public class Configuration {
 	// ========= Local Cloud VMs ==========
 
 	int vm_types_number;
+	String vm_os;
 	String[] vm_type_name;
-	int[] vm_cpu; // One per VM Type 0:small, 1:medium, 2:large
+	int[] vm_cpu_cores; // One per VM Type 0:small, 1:medium, 2:large
+	int[] vm_cpu_power; // One per VM Type 0:small, 1:medium, 2:large
 	int[] vm_memory; // One per VM Type
 	int[] vm_storage; // One per VM Type
 	int[] vm_bandwidth; // One per VM Type
@@ -301,8 +305,9 @@ public class Configuration {
 			slots = Integer.valueOf(property.getProperty("slots"));
 			slotDuration = Integer.valueOf(property.getProperty("slotDuration"));
 			slotDurationMetric = String.valueOf(property.getProperty("slotDurationMetric"));
-			numberOfMachineStatsPerSlot = Integer.valueOf(property.getProperty("numberOfMachineStatsPerSlot"));
-
+			number_of_machine_stats_per_slot = Integer.valueOf(property.getProperty("number_of_machine_stats_per_slot"));
+			web_stats_update_method=String.valueOf(property.getProperty("web_stats_update_method"));
+			slots_window=Integer.valueOf(property.getProperty("window"));
 			// Remote Cloud Machines
 			remote_machines_number = Integer.valueOf(property.getProperty("remote_machines_number"));
 			remote_machine_config = new Hashtable[remote_machines_number];
@@ -345,7 +350,8 @@ public class Configuration {
 
 			// Local Cloud VMs
 			vm_types_number = Integer.valueOf(property.getProperty("vm_types_number"));
-
+			vm_os= String.valueOf(property.getProperty("vm_os"));
+			
 			this.vm_type_name = new String[vm_types_number];
 
 			// VM_Types
@@ -355,10 +361,15 @@ public class Configuration {
 				vm_type_name[i] = svalue;
 			}
 
-			vm_cpu[0] = Integer.valueOf((String) property.getProperty("small_vm_cpu"));
-			vm_cpu[1] = Integer.valueOf((String) property.getProperty("medium_vm_cpu"));
-			vm_cpu[2] = Integer.valueOf((String) property.getProperty("large_vm_cpu"));
+			vm_cpu_cores[0] = Integer.valueOf((String) property.getProperty("small_vm_cpu_cores"));
+			vm_cpu_cores[1] = Integer.valueOf((String) property.getProperty("medium_vm_cpu_cores"));
+			vm_cpu_cores[2] = Integer.valueOf((String) property.getProperty("large_vm_cpu_cores"));
 
+			vm_cpu_power[0] = Integer.valueOf((String) property.getProperty("small_vm_cpu_power"));
+			vm_cpu_power[1] = Integer.valueOf((String) property.getProperty("medium_vm_cpu_power"));
+			vm_cpu_power[2] = Integer.valueOf((String) property.getProperty("large_vm_cpu_power"));
+
+			
 			vm_memory[0] = Integer.valueOf((String) property.getProperty("small_vm_memory"));
 			vm_memory[1] = Integer.valueOf((String) property.getProperty("medium_vm_memory"));
 			vm_memory[2] = Integer.valueOf((String) property.getProperty("large_vm_memory"));
@@ -402,7 +413,7 @@ public class Configuration {
 	}
 
 	public int getNumberOfMachineStatsPerSlot() {
-		return numberOfMachineStatsPerSlot;
+		return number_of_machine_stats_per_slot;
 	}
 
 	public int getRemote_machines_number() {
@@ -429,9 +440,14 @@ public class Configuration {
 	public String[] getVm_type_name() {
 		return vm_type_name;
 	}
+	
 
-	public int[] getVm_cpu() {
-		return vm_cpu;
+	public int[] getVm_cpu_cores() {
+		return vm_cpu_cores;
+	}
+
+	public int[] getVm_cpu_power() {
+		return vm_cpu_power;
 	}
 
 	public int[] getVm_memory() {
@@ -480,6 +496,30 @@ public class Configuration {
 
 	public Hashtable[][] getLifetime_generator() {
 		return lifetime_generator;
+	}
+
+	public Configuration get_config() {
+		return _config;
+	}
+
+	public int getSlots() {
+		return slots;
+	}
+
+	public int getNumber_of_machine_stats_per_slot() {
+		return number_of_machine_stats_per_slot;
+	}
+
+	public String getWeb_stats_update_method() {
+		return web_stats_update_method;
+	}
+
+	public int getSlots_window() {
+		return slots_window;
+	}
+
+	public String getVm_os() {
+		return vm_os;
 	}
 	
 	

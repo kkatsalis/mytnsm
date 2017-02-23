@@ -8,9 +8,6 @@ package Controller;
 import Cplex.SchedulerData;
 import Enumerators.EGeneratorType;
 import Enumerators.ESlotDurationMetric;
-import Statistics.ABStats;
-import Statistics.DBClass;
-import Statistics.DBUtilities;
 import Statistics.WebRequestStatsSlot;
 
 import java.util.ArrayList;

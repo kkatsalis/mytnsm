@@ -6,17 +6,7 @@
 package Utilities;
 
 import Controller.Configuration;
-import Controller.Host;
-import Controller.Provider;
-import Controller.Slot;
-import Controller.VM;
-import Controller.VMRequest;
-import Controller.ServiceRequestRates;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Hashtable;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Random;
 
 /**
@@ -25,162 +15,77 @@ import java.util.Random;
  */
 public class Utilities {
 
-    public static int randInt(int min, int max) {
+	public static int randInt(int min, int max) {
 
-        Random rand = new Random();
+		Random rand = new Random();
 
-        int randomNum = rand.nextInt((max - min) + 1) + min;
+		int randomNum = rand.nextInt((max - min) + 1) + min;
 
-        return randomNum;
-    }
+		return randomNum;
+	}
 
-    public static Hashtable determineVMparameters(VMRequest vmRequest, String hostName) {
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public static Hashtable determineVMparameters(Configuration config, int host_identifier, int vm_type, int service_id) {
 
-        Hashtable parameters = new Hashtable();
-        int y = vmRequest.getVmID();
+		Hashtable parameters = new Hashtable();
 
-        String vmName = hostName + "p" + String.valueOf(vmRequest.getProviderID()) + "r" + String.valueOf(vmRequest.getVmID());
+		String host_ip = (String) config.getHost_machine_config()[host_identifier].get("ip");
+		String vm_os = config.getVm_os();
 
-        parameters.put("hostName", hostName);
-        parameters.put("vmName", vmName);
-        parameters.put("OS", "precise");
-        parameters.put("vmType", vmRequest.getVmType());
-        parameters.put("interIP", "10.64.98." + String.valueOf(y));
-        parameters.put("interMask", "255.255.254.0");
-        parameters.put("interDefaultGateway", "10.64.98.1");
+		int vm_cpu = config.getVm_cpu()[vm_type];
+		int vm_memory = config.getVm_memory()[vm_type];
+		int vm_storage = config.getVm_storage()[vm_type];
+		int vm_bandwidth = config.getVm_bandwidth()[vm_type];
 
-        return parameters;
+		parameters.put("host_ip", host_ip);
+		parameters.put("vm_os", vm_os);
+		parameters.put("vm_cpu", vm_cpu);
+		parameters.put("vm_memory", vm_memory);
+		parameters.put("vm_storage", vm_storage);
+		parameters.put("vm_bandwidth", vm_bandwidth);
 
-    }
+		return parameters;
 
+	}
 
+	public static int getRequestsMadefromDB(int slot, int p, int s) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 
-    public static List<VMRequest> vmRequests2ActivateThisSlot(int slot, Slot[] _slots, Configuration _config) {
+	@SuppressWarnings("rawtypes")
+	public static void updateAllHostStatisObjects(Configuration config, int slot, int measurement) {
 
-        List<VMRequest> vmRequests2ActivateThisSlot = new ArrayList<>();
+		String host_identifier;
+		Hashtable host_config;
+		WebUtilities web_utilities = new WebUtilities(config);
 
-        // Step 1: Find RequestIDs to remove
-        for (int i = 0; i < _config.getProvidersNumber(); i++) {
-            for (int j = 0; j < _slots[slot].getVmRequests2Remove()[i].size(); j++) {
-                vmRequests2ActivateThisSlot.add(_slots[slot].getVmRequests2Activate()[i].get(j));
-            }
-        }
+		for (int i = 0; i < config.getHosts_number(); i++) {
 
-        return vmRequests2ActivateThisSlot;
-    }
+			host_config = config.getHost_machine_config()[i];
+			host_identifier = (String) host_config.get("ip");
+			Hashtable parameters = web_utilities.retrieveHostStats(host_identifier, slot, measurement);
 
-    public static List<VM> findActiveVMs(int slot, Host[] _hosts) {
+			// ----------------
+			// @ToDo send to DB
 
-        List<VM> activeVMs = new ArrayList<>();
-        List<VM> vms;
+		}
 
-        for (int i = 0; i < _hosts.length; i++) {
-            vms = _hosts[i].getVMs();
+	}
 
-            for (Iterator<VM> iterator = vms.iterator(); iterator.hasNext();) {
-                VM nextVM = iterator.next();
-                if (nextVM.isActive()) {
-                    activeVMs.add(nextVM);
-                }
-            }
+	public static void updateVMsStatistics(Configuration _config, int slot, int _currentInstance) {
+		// TODO Auto-generated method stub
 
-        }
+	}
 
-        return activeVMs;
+	public static void updateSimulatorStatistics(Configuration _config, int slot, int _currentInstance) {
+		// TODO Auto-generated method stub
 
-    }
+	}
 
-    public static List<VM> closedVMs(int slot, Host[] _hosts) {
+	public static void checkVM(String vm_name) {
+		// TODO Auto-generated method stub
 
-        List<VM> closedVMs = new ArrayList<>();
-        List<VM> vms;
-
-        for (int i = 0; i < _hosts.length; i++) {
-            vms = _hosts[i].getVMs();
-
-            for (Iterator<VM> iterator = vms.iterator(); iterator.hasNext();) {
-                VM nextVM = iterator.next();
-                if (!nextVM.isActive()) {
-                    closedVMs.add(nextVM);
-                }
-            }
-
-        }
-
-        return closedVMs;
-
-    }
-
-    public static int findHostID(Configuration config, String hostName) {
-
-        int id = -1;
-
-        for (int i = 0; i < config.getHostNames().size(); i++) {
-            if (config.getHostNames().get(i).equals(hostName)) {
-                return i;
-            }
-        }
-
-        return id;
-    }
-
-    public static List<VmRequestStruct> transformReqeustMatrixToRandomList(int[][][] requestMatrix, int pr, int vi, int si) {
-
-        List<VmRequestStruct> list = new ArrayList<VmRequestStruct>();
-
-        boolean empty = false;
-        int p;
-        int v;
-        int s;
-
-        int[][][] requestMatrixCopy=new int[pr][vi][si];
-        
-        for (int i = 0; i < pr; i++) {
-            for (int j = 0; j < vi; j++) {
-                for (int k = 0; k < si; k++) {
-                    requestMatrixCopy[i][j][k]=requestMatrix[i][j][k];
-                }
-                
-            }
-        }
-        
-        while (!checkArrayEmptiness(requestMatrixCopy, pr, vi, si)) {
-
-            p = randInt(0, pr - 1);
-            v = randInt(0, vi - 1);
-            s = randInt(0, si - 1);
-
-            if (requestMatrixCopy[p][v][s] > 0) {
-                requestMatrixCopy[p][v][s]--;
-                list.add(new VmRequestStruct(p, v, s));
-            }
-
-        }
-
-        return list;
-
-    }
-
-   
-   
-
-    public static boolean checkArrayEmptiness(int[][][] requestMatrix, int pr, int vi, int si) {
-
-        boolean empty = true;
-
-        for (int p = 0; p < pr; p++) {
-            for (int v = 0; v < vi; v++) {
-                for (int s = 0; s < si; s++) {
-                    if (requestMatrix[p][v][s] > 0) {
-                        empty = false;
-                    }
-                }
-            }
-
-        }
-
-        return empty;
-
-    }
+	}
 
 }

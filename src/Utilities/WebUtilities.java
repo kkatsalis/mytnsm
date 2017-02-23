@@ -42,14 +42,14 @@ public class WebUtilities {
 
 	}
 
-	public boolean createVM(Hashtable parameters) throws IOException {
+	public String createVM(Hashtable parameters) throws IOException {
 
 		// http://nitlab3.inf.uth.gr:4100/vm-create/server-john/precise/small/192.168.100.10/255.255.254.0/192.168.100.1/node
 
 		String uri = "http://" + _config.getNitosServer() + ".inf.uth.gr:4100/vm-create/";
 		boolean methodResponse = false;
 
-		String vmName = String.valueOf(parameters.get("vmName"));
+		String vm_name = String.valueOf(parameters.get("vmName"));
 		String OS = String.valueOf(parameters.get("OS"));
 		String vmType = String.valueOf(parameters.get("vmType"));
 		String interIP = String.valueOf(parameters.get("interIP"));
@@ -57,53 +57,24 @@ public class WebUtilities {
 		String interDefaultGateway = String.valueOf(parameters.get("interDefaultGateway"));
 		String hostName = String.valueOf(parameters.get("hostName"));
 
-		uri += vmName + "/";
+		uri += vm_name + "/";
 		uri += OS + "/";
-		uri += vmType + "/";
-		uri += interIP + "/";
-		uri += interMask + "/";
-		uri += interDefaultGateway + "/";
-		uri += hostName;
+	
 
 		CloseableHttpClient httpclient = HttpClients.createDefault();
 		HttpGet httpget = new HttpGet(uri);
 
 		try (CloseableHttpResponse response = httpclient.execute(httpget)) {
-			System.out.println("CreateVM called for:" + vmName);
+			System.out.println("CreateVM called");
 			System.out.println("Response Status:" + response.getStatusLine().toString());
 
 			if (response.getStatusLine().toString().contains("200"))
 				methodResponse = true;
 		}
 
-		return methodResponse;
+		return vm_name;
 	}
-
-	public boolean startVM(String vmName, String hostName) throws IOException {
-
-		// http://nitlab3.inf.uth.gr:4100/vm-start/server-john
-
-		String uri = "http://" + _config.getNitosServer() + ".inf.uth.gr:4100/vm-start/";
-		String methodResponse = "";
-
-		uri += vmName;
-		uri += "/" + hostName;
-
-		CloseableHttpClient httpclient = HttpClients.createDefault();
-		HttpGet httpget = new HttpGet(uri);
-		CloseableHttpResponse response = httpclient.execute(httpget);
-
-		try {
-			System.out.println("**** VM:" + vmName + " started");
-			if (response.getStatusLine().toString().contains("200"))
-				return true;
-
-		} finally {
-			response.close();
-		}
-
-		return false;
-	}
+	
 
 	public Boolean deleteVM(int host_id, String vm_ip) throws IOException {
 
