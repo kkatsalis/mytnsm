@@ -5,12 +5,6 @@
  */
 package Controller;
 
-import Enumerators.EMachineTypes;
-import Statistics.HostStats;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-
 /**
  *
  * @author kostas
@@ -26,10 +20,6 @@ public class Host {
     int storage;
     int bandwidth;
     
-    HostStats _hostStats; // A number of measurements is taken for every Host per Slot
-    
-    CopyOnWriteArrayList<VM> _VMs;    // A list with VMs per Host Machine;
-    
     public Host(int hostId,Configuration config) {
         
         this.hostID=hostId;
@@ -40,9 +30,7 @@ public class Host {
         this.storage=Integer.valueOf((String)_config.host_machine_config[hostId].get("storage"));
         this.bandwidth=Integer.valueOf((String)_config.host_machine_config[hostId].get("bandwidth"));
         
-        
-        this._hostStats=new HostStats(); 
-        this._VMs=new CopyOnWriteArrayList<>();     // A list with VMs per Host Machine;
+
     }
 
 	public int getHostID() {
@@ -69,13 +57,7 @@ public class Host {
 		return bandwidth;
 	}
 
-	public HostStats get_hostStats() {
-		return _hostStats;
-	}
 
-	public CopyOnWriteArrayList<VM> get_VMs() {
-		return _VMs;
-	}
 
     
     

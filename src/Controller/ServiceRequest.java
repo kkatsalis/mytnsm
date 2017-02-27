@@ -25,11 +25,14 @@ public class ServiceRequest {
 
 	int[] vms_requested; //[v] v=0: small,1 medium, 2 large
 	int[][] vms_deployed; //[h][v] h: host, v:type
-	List<String>[] vms_deployed_ips; //[n][v] n: host, v=0: small,1 medium, 2 large
-	
+	String service_name;
+	String charm= "cs:trusty/mysql-55";
+	String kvm_machine_to_deploy= "jk55";
+	List<String[][]> units; 
+
 	
 	@SuppressWarnings("unchecked")
-	public ServiceRequest(Configuration config,int providerID, int serviceID, int lifetime) {
+	public ServiceRequest(Configuration config, int providerID, int serviceID, int lifetime) {
 
 		this.providerID = providerID;
 		this.lifetime = lifetime;
@@ -37,7 +40,8 @@ public class ServiceRequest {
 
 		this.vms_requested=new int [config.getVm_types_number()];
 		this.vms_deployed=new int [config.getVm_types_number()][config.getVm_types_number()];
-		this.vms_deployed_ips=new ArrayList [config.getHosts_number()];
+		this.service_name="";
+		this.units=new ArrayList<String[][]>();
 		
 		requestId++;
 
@@ -87,9 +91,27 @@ public class ServiceRequest {
 	}
 
 
-	public List<String>[] getVms_deployed_ips() {
-		return vms_deployed_ips;
+	public String getService_name() {
+		return service_name;
 	}
+
+
+	public String getCharm() {
+		return charm;
+	}
+
+
+	public String getKvm_machine_to_deploy() {
+		return kvm_machine_to_deploy;
+	}
+
+
+	public List<String[][]> getUnits() {
+		return units;
+	}
+
+	
+
 
 
 

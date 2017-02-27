@@ -47,7 +47,6 @@ public class Simulator {
 	List<String> _clientNames;
 
 	Host[] _hosts;
-	WebClient[] _webClients;
 	Slot[] _slots;
 	Controller _controller;
 	Random rand;

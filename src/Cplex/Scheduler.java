@@ -6,12 +6,12 @@
 package Cplex;
 
 import Utilities.Utilities;
-import Utilities.VmRequestStruct;
 import ilog.concert.*;
 import ilog.cplex.*;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
@@ -19,6 +19,7 @@ import java.util.Random;
 
 import Controller.Configuration;
 
+@SuppressWarnings("unused")
 public class Scheduler {
 
     Configuration config;
@@ -322,7 +323,6 @@ public class Scheduler {
     public int[][][][] RunFFRR(SchedulerData data) {
 
         int[][][][] activationMatrix = new int[data.N][data.P][data.V][data.S];
-
         int[][] reservedResources;
 
         int vmsNumber = 0;
@@ -366,33 +366,57 @@ public class Scheduler {
 
     public int[][][][] RunFF_Random(SchedulerData data) {
 
-        int[][][][] activationMatrix = new int[data.N][data.P][data.V][data.S];
-
+    	int[][][][] activationMatrix = new int[data.N][data.P][data.V][data.S];
         int[][] reservedResources;
-
+        List<Integer> hosts_checked=new ArrayList();
+        
         int vmsNumber = 0;
         boolean checkIfFits = false;
+        Random random=new Random();
+        int host;
+        
+        for (int v = 0; v < data.V; v++) {
+            for (int s = 0; s < data.S; s++) {
 
-        List<VmRequestStruct> list = Utilities.transformReqeustMatrixToRandomList(data.A, data.P, data.V, data.S);
+                for (int p = 0; p < data.P; p++) {
 
-        for (VmRequestStruct vmRequestStruct : list) {
+                    vmsNumber = data.A[p][v][s];
 
-            reservedResources = updateReservedResources(data, activationMatrix);
+                    int vmsNumberExamined = 0;
 
-            for (int n = 0; n < data.N; n++) {
-                checkIfFits = checkIftheVMFits(data, reservedResources, vmRequestStruct.getVm(), n);
+                    while (vmsNumberExamined < vmsNumber) {
 
-                if (checkIfFits) {
-                    activationMatrix[n][vmRequestStruct.getProviderID()][vmRequestStruct.getVm()][vmRequestStruct.getService()]++;
-                    break;
+                    	for (int n = 0; n < data.N; n++) {
+                    		hosts_checked.add(n);
+						}
+                    	
+                    	while(!hosts_checked.isEmpty()){
+                        
+                    		host=random.nextInt(data.N);
+                    		reservedResources = updateReservedResources(data, activationMatrix);
+
+                    		
+                            checkIfFits = checkIftheVMFits(data, reservedResources, v, host);
+                            hosts_checked.remove(new Integer(host));
+                            
+                            if (checkIfFits) {
+                                activationMatrix[host][p][v][s]++;
+                                break;
+                            }
+                        
+                        vmsNumberExamined++;
+                    	}
+                    }
+
                 }
+
             }
 
         }
-      
 
         return activationMatrix;
-
+    
+	
     }
 
     public void updateData(SchedulerData data, int[][][][] a) {

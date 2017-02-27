@@ -6,10 +6,8 @@
 package Controller;
 
 import Cplex.CplexResponse;
-import Enumerators.EMachineTypes;
 import Enumerators.ESlotDurationMetric;
 import Utilities.WebUtilities;
-import Statistics.VMStats;
 import Statistics.WebRequestStatsSlot;
 import Cplex.Scheduler;
 import Cplex.SchedulerData;
@@ -17,22 +15,13 @@ import Enumerators.EAlgorithms;
 import Enumerators.EStatsUpdateMethod;
 import Utilities.Utilities;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Queue;
-import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import jsc.distributions.Exponential;
-import jsc.distributions.Pareto;
-import omlBasePackage.OMLMPFieldDef;
-import omlBasePackage.OMLTypes;
-import org.json.JSONException;
 
 /**
  *
@@ -44,7 +33,6 @@ public class Controller {
 	Slot[] _slots;
 	Host[] _hosts;
 	Provider[] _providers;
-	List<VMStats> _activeVMStats;
 
 	WebUtilities _webUtilities;
 
@@ -56,21 +44,13 @@ public class Controller {
 
 	WebRequestStatsSlot[][][] _webRequestSlotStats;
 
-	int[][] total_services_requested; // [p][s]=[provider][service]
-	int[][] total_services_satisfied; // [p][s]=[provider][service]
-	int[][] total_vms_requested; // [p][v]=[provider][vm_type]
-	int[][] total_vms_satisfied; // [p][v]=[provider][vm_type]
-	int[][] total_vms_deleted; // [p][v]=[provider][vm_type]
-	int[][] vms_requested; // [p][v]=[provider][vm_type]
-	int[][] vms_satisfied; // [p][v]=[provider][vm_type]
 
-	int[][][][] vms2DeleteMatrix;
 	int[][] _webRequestPattern; // [p][s]: p=provider, s=service
 
-	int hosts_number; // hosts number
-	int providers_number; // providers number
-	int vm_types_number; // vm types number
-	int services_number; // services number;
+	int hosts_number; 
+	int providers_number; 
+	int vm_types_number; 
+	int services_number; 
 	int slots_number;
 
 	Timer stats_timer;
@@ -87,7 +67,6 @@ public class Controller {
 		this.services_number = _config.getServices_number();
 		this.slots_number = _config.getSlotsNumber();
 		this._webUtilities = new WebUtilities(config);
-		this._activeVMStats = new ArrayList<>();
 		this._cplexData = new SchedulerData(config);
 		this._providers = _provider;
 
@@ -99,7 +78,7 @@ public class Controller {
 	private void initializeController() {
 
 		this._webRequestSlotStats = new WebRequestStatsSlot[_config
-				.getSlotsNumber()][providers_number][services_number];
+		                                                    .getSlotsNumber()][providers_number][services_number];
 		for (int slot = 0; slot < slots_number; slot++) {
 			for (int p = 0; p < this.providers_number; p++) {
 				for (int s = 0; s < this.services_number; s++) {
@@ -114,33 +93,7 @@ public class Controller {
 			}
 		}
 
-		for (int p = 0; p < this.providers_number; p++) {
-			for (int s = 0; s < this.services_number; s++) {
-				total_services_requested[p][s] = 0;
-				total_services_satisfied[p][s] = 0;
-			}
-		}
 
-		// Vm delete matrix
-		vms2DeleteMatrix = new int[hosts_number][providers_number][vm_types_number][services_number];
-
-		// VM Statistics Matrices
-		total_vms_requested = new int[providers_number][vm_types_number];
-		total_vms_satisfied = new int[providers_number][vm_types_number];
-		total_vms_deleted = new int[providers_number][vm_types_number];
-
-		vms_requested = new int[providers_number][vm_types_number];
-		vms_satisfied = new int[providers_number][vm_types_number];
-
-		for (int p = 0; p < providers_number; p++) {
-			for (int v = 0; v < vm_types_number; v++) {
-				total_vms_requested[p][v] = 0;
-				total_vms_satisfied[p][v] = 0;
-				total_vms_deleted[p][v] = 0;
-				vms_requested[p][v] = 0;
-				vms_satisfied[p][v] = 0;
-			}
-		}
 	}
 
 	@SuppressWarnings("unused")
@@ -163,16 +116,18 @@ public class Controller {
 				}
 			}
 			int[][][] vmRequestMatrix = loadVMRequestMatrix(slot);
+
 			// System.out.println(Arrays.deepToString(vmRequestMatrix));
 
 			// Load VM Deactivation Matrix
-			prepareVmDeleteMatrix(slot);
-			deleteVMs(slot);
+			int[][][][] vms2DeleteMatrix=prepareVmDeleteMatrix(slot);
+			destroyServices(slot);
+
 
 			// Update WebRequest Pattern
 			// int[][] requestPattern=Utilities.findRequestPattern(_config);
 
-			// Update Cplex data Parameters
+			// Update CPLEX data Parameters
 			_cplexData.updateParameters(_webRequestPattern, vmRequestMatrix, vms2DeleteMatrix);
 
 			// Run CPLEX
@@ -190,6 +145,10 @@ public class Controller {
 					activationMatrix = scheduler.RunLyapunov(_cplexData);
 				else
 					System.out.print("No scheduling algorithm is defined");
+
+				Utilities.updateActivationStats(slot,_config,activationMatrix);
+
+
 			}
 
 			scheduler.updateData(_cplexData, activationMatrix);
@@ -200,16 +159,13 @@ public class Controller {
 			updateDbStatisticsObject(vmRequestMatrix, activationMatrix, net_benefit, slot, _cplexData);
 
 			// ----------- Create VMs Actual or Objects)
-			createAllVms(activationMatrix);
+			createAllServices(activationMatrix);
 
 		} catch (Exception ex) {
 			Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
 		}
 
 	}
-
-	// n[i][j][v][s]: # of allocated VMs of v v for service s of provider j at
-	// AP i
 
 	public void updateServiceRequestPattern(int slot) {
 
@@ -279,9 +235,7 @@ public class Controller {
 
 			if (_currentInstance < numberOfMachineStatsPerSlot) {
 
-				Utilities.updateAllHostStatisObjects(_config, slot, _currentInstance);
-				Utilities.updateVMsStatistics(_config, slot, _currentInstance);
-				Utilities.updateSimulatorStatistics(_config, slot, _currentInstance);
+				//		Utilities.updateSimulatorStatistics(_config, slot, _currentInstance);
 
 				_currentInstance++;
 
@@ -323,14 +277,16 @@ public class Controller {
 		// Solves the VM mapping problem
 		int[] _vms = _cplexData.f(_cplexData, providerID, serviceID);
 
-		for (int i = 0; i < _vms.length; i++) {
-			_serviceRequest.getVms_requested()[i] = _vms[i];
+		for (int v = 0; v < _vms.length; v++) {
+			_serviceRequest.getVms_requested()[v] = _vms[v];
+			Utilities.updateRequestStats(slot,providerID,v,serviceID,_vms[v]);
 		}
+
 
 	}
 
-	private void createAllVms(int[][][][] activation_matrix) {
-		LoadVM load_vm_object;
+	private void createAllServices(int[][][][] activation_matrix) {
+		LoadService load_service_object;
 		Thread thread;
 		int vms_number = 0;
 
@@ -342,8 +298,8 @@ public class Controller {
 							vms_number = activation_matrix[i][p][v][s];
 
 							while (vms_number > 0) {
-								load_vm_object = new LoadVM(i, v, s);
-								thread = new Thread(load_vm_object);
+								load_service_object = new LoadService(i,p, v, s,vms_number);
+								thread = new Thread(load_service_object);
 								thread.start();
 								Thread.sleep(0);
 							}
@@ -360,26 +316,24 @@ public class Controller {
 
 	}
 
-	private void deleteVMs(int slot) throws InterruptedException {
+	private void destroyServices(int slot) throws InterruptedException {
 
 		for (int p = 0; p < providers_number; p++) {
 
 			for (ServiceRequest request : _slots[slot].getServiceRequests2Remove()[p]) {
 
-				for (int i = 0; i < hosts_number; i++) {
-					for (String vm_ip : request.getVms_deployed_ips()[i]) {
-
-						DeleteVM deleter = new DeleteVM(i, vm_ip);
-						Thread thread = new Thread(deleter);
-						thread.start();
-						Thread.sleep(5000);
-					}
-				}
+				DestroyService deleter = new DestroyService(request);
+				Thread thread = new Thread(deleter);
+				thread.start();
+				Thread.sleep(5000);
 			}
+
 		}
 
 		System.out.println("Method Call: Delete VMs Called");
 	}
+
+
 
 	private CplexResponse updatePenaltyAndUtility(SchedulerData data, int[][][][] activationMatrix) {
 
@@ -439,29 +393,33 @@ public class Controller {
 		return vmRequestMatrix;
 	}
 
-	private void prepareVmDeleteMatrix(int slot) {
-
-		for (int i = 0; i < hosts_number; i++)
-			for (int p = 0; p < providers_number; p++)
-				for (int v = 0; v < vm_types_number; v++)
-					for (int s = 0; s < services_number; s++) {
-						this.vms2DeleteMatrix[i][p][v][s] = 0;
-					}
-
-		int s = -1;
-
-		for (int p = 0; p < providers_number; p++) {
-			for (ServiceRequest request : _slots[slot].getServiceRequests2Remove()[p]) {
-
-				for (int i = 0; i < hosts_number; i++) {
-					for (int v = 0; v < vm_types_number; v++) {
-						s = request.getServiceID();
-						this.vms2DeleteMatrix[i][p][v][s] = request.getVms_deployed()[i][v];
+		private int[][][][] prepareVmDeleteMatrix(int slot) {
+	
+			int[][][][] vms2DeleteMatrix = new int[hosts_number][providers_number][vm_types_number][services_number];
+	
+			for (int i = 0; i < hosts_number; i++)
+				for (int p = 0; p < providers_number; p++)
+					for (int v = 0; v < vm_types_number; v++)
+						for (int s = 0; s < services_number; s++) {
+							vms2DeleteMatrix[i][p][v][s] = 0;
+						}
+	
+			int s = -1;
+	
+			for (int p = 0; p < providers_number; p++) {
+				for (ServiceRequest request : _slots[slot].getServiceRequests2Remove()[p]) {
+	
+					for (int i = 0; i < hosts_number; i++) {
+						for (int v = 0; v < vm_types_number; v++) {
+							s = request.getServiceID();
+							vms2DeleteMatrix[i][p][v][s] = request.getVms_deployed()[i][v];
+						}
 					}
 				}
 			}
+	
+			return vms2DeleteMatrix;
 		}
-	}
 
 	private int[][][][] tempScheduler(double[][][] vmRequestMatrix) {
 		// activationMatrix[i][j][v][s]: # of allocated VMs of v v for service s
@@ -485,32 +443,34 @@ public class Controller {
 		// tbd
 	}
 
-	class DeleteVM implements Runnable {
+	class DestroyService implements Runnable {
 
 		private String threadName;
-		private int host_id;
-		private String vm_ip;
+		private String service_name;
 		private Boolean deleted = false;
-
-		DeleteVM(int host_id, String vm_ip) {
-
-			this.host_id = host_id;
-			this.vm_ip = vm_ip;
+		
+		DestroyService(ServiceRequest request) {
+			service_name=request.getService_name();
 		}
 
+		@SuppressWarnings({ "rawtypes", "unchecked" })
 		public void run() {
 
 			try {
 
 				System.out.println("Delete Thread: " + threadName + " started");
-				deleted = _webUtilities.deleteVM(this.host_id, this.vm_ip);
+
+				Hashtable parameters=new Hashtable();
+				parameters.put("service_name",service_name);
+
+				deleted = _webUtilities.destroyService(parameters);
 				Thread.sleep(0);
 
 			} catch (Exception e) {
 				System.out.println("Thread " + threadName + " interrupted.");
 			}
 
-			System.out.println("Delete Thread " + threadName + " finished.");
+			System.out.println("Delete Service Thread " + threadName + " finished.");
 
 		}
 
@@ -520,58 +480,66 @@ public class Controller {
 
 	}
 
-	public class LoadVM implements Runnable {
+	public class LoadService implements Runnable {
 
-		String threadName;
+		String thread_name;
 		int host_identifier;
 
 		public boolean loaded = false;
-		int hostID;
-		int vm_id;
-		int service_id;
 
-		LoadVM(int host_identifier, int vm_id, int service_id) {
+		String vm_type="";
+		String vm_name="";
+		String vm_series="trusty";
 
-			this.host_identifier = host_identifier;
-			this.vm_id = vm_id;
-			this.service_id = service_id;
-			this.threadName = "Load VM thread name: " + host_identifier + "-vm_type" + vm_id;
+		LoadService(int host_id, int vm_id, int provider_id,int service_id, int index) {
 
-			System.out.println("Creating " + threadName);
+
+			switch (vm_id) {
+			case 0:
+				vm_name="kvm-small";
+				break;
+			case 1:
+				vm_name="kvm-medium";
+				break;
+			case 2:
+				vm_name="kvm-large";
+				break;
+
+			default:
+				break;
+			}
+			this.vm_name= host_id+"_"+vm_id+"_"+provider_id+"_"+service_id+"_"+index;
+			this.thread_name = "thread_"+vm_name;
+
+			System.out.println("Creating " + thread_name);
 		}
 
+		@SuppressWarnings({ "rawtypes", "unchecked" })
 		public void run() {
 
-			String vm_name = "";
 			try {
 
-				System.out.println("Load VM Thread: " + threadName + " started");
+				System.out.println("Load VM Thread: " + thread_name + " started");
 
-				vm_name = createVM(host_identifier, vm_id, service_id);
-				Utilities.checkVM(vm_name);
+				Hashtable parameters=new Hashtable();
+
+				parameters.put("vm_name",vm_name);
+				parameters.put("vm_series",vm_series);
+				parameters.put("vm_type",vm_type);
+
+				boolean vm_created  = _webUtilities.createVM(parameters);
+				System.out.println("vm_created:" + vm_created );	
 
 				Thread.sleep(0);
 
 			} catch (Exception e) {
-				System.out.println("Thread " + threadName + " interrupted.");
+				System.out.println("Thread " + thread_name + " interrupted.");
 			}
 
-			System.out.println("Delete Thread " + threadName + " finished.");
+			System.out.println("Create VM thread " + thread_name + " finished.");
 			loaded = true;
 		}
 
-		@SuppressWarnings("rawtypes")
-		private String createVM(int host_identifier, int vm_type, int service_id) throws IOException {
-
-			Hashtable parameters;
-			String vm_created = "";
-
-			parameters = Utilities.determineVMparameters(_config, host_identifier, vm_type, service_id);
-			vm_created = _webUtilities.createVM(parameters);
-
-			return vm_created;
-
-		}
 
 		public SchedulerData getCplexData() {
 			return _cplexData;

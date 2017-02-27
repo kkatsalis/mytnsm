@@ -43,6 +43,7 @@ public class Configuration {
 	@SuppressWarnings("rawtypes")
 	Hashtable[] remote_machine_config; // host name, ip
 
+	int resources_number;
 	// ========= Local Cloud Hosts ==========
 	// Used for real deployment
 	int hosts_number;
@@ -318,7 +319,9 @@ public class Configuration {
 				svalue = String.valueOf((String) property.getProperty(parameter));
 				remote_machine_config[i].put("ip", svalue);
 			}
-
+			
+			resources_number=Integer.valueOf((String) property.getProperty("resources_number"));
+			
 			// Local Cloud Hosts
 			hosts_number = Integer.valueOf(property.getProperty("hosts_number"));
 			host_machine_config = new Hashtable[hosts_number];
@@ -328,9 +331,13 @@ public class Configuration {
 				svalue = String.valueOf((String) property.getProperty(parameter));
 				host_machine_config[i].put("ip", svalue);
 				
-				parameter = "host_"+ String.valueOf(i)+"_cpu";
+				parameter = "host_"+ String.valueOf(i)+"_cpu_cores";
 				svalue = String.valueOf((String) property.getProperty(parameter));
-				host_machine_config[i].put("cpu", svalue);
+				host_machine_config[i].put("cpu_cores", svalue);
+				
+				parameter = "host_"+ String.valueOf(i)+"_cpu_power";
+				svalue = String.valueOf((String) property.getProperty(parameter));
+				host_machine_config[i].put("cpu_power", svalue);
 				
 				parameter = "host_"+ String.valueOf(i)+"_memory";
 				svalue = String.valueOf((String) property.getProperty(parameter));
@@ -520,6 +527,10 @@ public class Configuration {
 
 	public String getVm_os() {
 		return vm_os;
+	}
+
+	public int getResources_number() {
+		return resources_number;
 	}
 	
 	

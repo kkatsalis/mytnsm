@@ -41,11 +41,11 @@ public class SchedulerData {
     public SchedulerData(Configuration config)
     {
         this.config=config;
-        this.S = config.getServicesNumber();
-        this.P = config.getProvidersNumber();
-        this.V = config.getVmTypesNumber();
-        this.N = config.getHostsNumber();
-        this.R = config.getMachineResourcesNumber();
+        this.S = config.getServices_number();
+        this.P = config.getProviders_number();
+        this.V = config.getVm_types_number();
+        this.N = config.getHosts_number();
+        this.R = config.getResources_number();
         
          r = new int[P][S];
          w = new double[V];
@@ -87,13 +87,15 @@ public class SchedulerData {
         for (int vmtype=0;vmtype<V;vmtype++)
             for (int res=0;res<R;res++){
                 if(res==0)
-                    m[vmtype][res] = config.getCpu_VM()[vmtype];
+                    m[vmtype][res] = config.getVm_cpu_cores()[vmtype];
                 else if(res==1)
-                    m[vmtype][res] = config.getMemory_VM()[vmtype];
+                    m[vmtype][res] = config.getVm_cpu_power()[vmtype];
                 else if(res==2)
-                    m[vmtype][res] = config.getStorage_VM()[vmtype];
+                    m[vmtype][res] = config.getVm_memory()[vmtype];
                 else if(res==3)
-                    m[vmtype][res] = config.getBandwidth_VM()[vmtype];
+                    m[vmtype][res] = config.getVm_storage()[vmtype];
+                else if(res==4)
+                    m[vmtype][res] = config.getVm_bandwidth()[vmtype];
                 
             }
         // 3- p[host][res]: capacity of each res res at each AP host
@@ -103,13 +105,15 @@ public class SchedulerData {
             for (int res=0;res<R;res++){
                 
                 if(res==0)
-                    p[host][res] = config.getCpu_host();
+                    p[host][res] = (double) config.getHost_machine_config()[host].get("cpu_cores");
                 else if(res==1)
-                    p[host][res] = config.getMemory_host();
+                    p[host][res] = (double) config.getHost_machine_config()[host].get("cpu_power");
                 else if(res==2)
-                    p[host][res] = config.getStorage_host();
+                    p[host][res] = (double) config.getHost_machine_config()[host].get("cpu_memory");
                 else if(res==3)
-                    p[host][res] = config.getBandwidth_host();
+                    p[host][res] = (double) config.getHost_machine_config()[host].get("storage");
+                else if(res==4)
+                    p[host][res] = (double) config.getHost_machine_config()[host].get("bandwidth");
                 
             }
         

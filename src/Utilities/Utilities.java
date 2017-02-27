@@ -8,7 +8,10 @@ package Utilities;
 import Controller.Configuration;
 import java.util.Hashtable;
 import java.util.Random;
-
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 /**
  *
  * @author kostas
@@ -32,14 +35,16 @@ public class Utilities {
 		String host_ip = (String) config.getHost_machine_config()[host_identifier].get("ip");
 		String vm_os = config.getVm_os();
 
-		int vm_cpu = config.getVm_cpu()[vm_type];
+		int vm_cpu_power = config.getVm_cpu_power()[vm_type];
+		int vm_cpu_cores= config.getVm_cpu_cores()[vm_type];
 		int vm_memory = config.getVm_memory()[vm_type];
 		int vm_storage = config.getVm_storage()[vm_type];
 		int vm_bandwidth = config.getVm_bandwidth()[vm_type];
 
 		parameters.put("host_ip", host_ip);
 		parameters.put("vm_os", vm_os);
-		parameters.put("vm_cpu", vm_cpu);
+		parameters.put("vm_cpu_power", vm_cpu_power);
+		parameters.put("vm_cpu_cores", vm_cpu_cores);
 		parameters.put("vm_memory", vm_memory);
 		parameters.put("vm_storage", vm_storage);
 		parameters.put("vm_bandwidth", vm_bandwidth);
@@ -48,44 +53,84 @@ public class Utilities {
 
 	}
 
-	public static int getRequestsMadefromDB(int slot, int p, int s) {
-		// TODO Auto-generated method stub
-		return 0;
+	public static Connection connect() {
+		Connection conn = null;
+		try {
+			// db parameters
+			String url = "jdbc:sqlite:activations_stats.db";
+			// create a connection to the database
+			conn = DriverManager.getConnection(url);
+
+			System.out.println("Connection to SQLite has been established.");
+
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		} 
+		return conn;
 	}
 
-	@SuppressWarnings("rawtypes")
-	public static void updateAllHostStatisObjects(Configuration config, int slot, int measurement) {
+	public static void updateActivationStats(int slot, Configuration config,int[][][][] activation_matrix) {
 
-		String host_identifier;
-		Hashtable host_config;
-		WebUtilities web_utilities = new WebUtilities(config);
+		String sql = "INSERT INTO ACTIVATION_STATS(slot,algorithm,host_id,provider_id,vm_type_id,service_id,vms_requested) VALUES(?,?,?,?,?,?,?)";
+		String algorithm=config.getAlgorithm();
+		int hosts_number = config.getHosts_number();
+		int providers_number = config.getProviders_number();
+		int vm_types_number = config.getVm_types_number();
+		int services_number = config.getServices_number();
+		int vms_number=0;
 
-		for (int i = 0; i < config.getHosts_number(); i++) {
+		for (int n = 0; n < hosts_number; n++) {
+			for (int p = 0; p < providers_number; p++) {
+				for (int v = 0; v < vm_types_number; v++) {
+					for (int s = 0; s < services_number; s++) {
+						vms_number = activation_matrix[n][p][v][s];
 
-			host_config = config.getHost_machine_config()[i];
-			host_identifier = (String) host_config.get("ip");
-			Hashtable parameters = web_utilities.retrieveHostStats(host_identifier, slot, measurement);
+						try (Connection conn = connect();
+								PreparedStatement pstmt = conn.prepareStatement(sql)) {
+							pstmt.setInt(1, slot);
+							pstmt.setString(2, algorithm);
+							pstmt.setInt(3, n);
+							pstmt.setInt(4, p);
+							pstmt.setInt(5, v);
+							pstmt.setInt(6, s);
+							pstmt.setInt(7, vms_number);
 
-			// ----------------
-			// @ToDo send to DB
-
+							pstmt.executeUpdate();
+						} catch (SQLException e) {
+							System.out.println(e.getMessage());
+						}
+					}
+				}
+			}
 		}
-
 	}
 
-	public static void updateVMsStatistics(Configuration _config, int slot, int _currentInstance) {
-		// TODO Auto-generated method stub
+	public static void updateRequestStats(int slot, int p, int v,int s, int vms) {	
 
+		String sql = "INSERT INTO VM_REQUESTS_STATS(slot, provider_id,vm_type_id,service_id,vms_requested) VALUES(?,?,?,?,?)";
+				
+		try (Connection conn = connect();
+				PreparedStatement pstmt = conn.prepareStatement(sql)) {
+			pstmt.setInt(1, slot);
+			pstmt.setInt(4, p);
+			pstmt.setInt(5, v);
+			pstmt.setInt(6, s);
+			pstmt.setInt(7, vms);
+
+			pstmt.executeUpdate();
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
 	}
 
-	public static void updateSimulatorStatistics(Configuration _config, int slot, int _currentInstance) {
-		// TODO Auto-generated method stub
 
-	}
 
-	public static void checkVM(String vm_name) {
-		// TODO Auto-generated method stub
+public static int getRequestsMadefromDB(int slot, int p, int s) {
+	// TODO Auto-generated method stub
+	return 0;
+}
 
-	}
+
+
 
 }
