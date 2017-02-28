@@ -40,6 +40,7 @@ public class Simulator {
 	int slot = 0;
 
 	Configuration _config;
+	int hosts_number;
 	int providers_number;
 	int services_number;
 
@@ -63,6 +64,7 @@ public class Simulator {
 	public Simulator(String algorithm, int simulatorID, int runID) {
 
 		this._config = new Configuration();
+		this.hosts_number=_config.getHosts_number();
 		this.providers_number = _config.getProviders_number();
 		this.services_number = _config.getServices_number();
 
@@ -94,7 +96,7 @@ public class Simulator {
 			_slots[i] = new Slot(i, _config);
 
 		}
-		System.out.println("Initialization: Slot Objects Ready");
+		System.out.println("Initialization: Slots Objects Ready");
 
 		// for (int i = 0; i < _slots.length; i++) {
 		// System.out.println("---------------- SLOT " + i + "
@@ -115,14 +117,14 @@ public class Simulator {
 		for (int p = 0; p < providers_number; p++) {
 			_providers[p] = new Provider(p, _config);
 		}
-		System.out.println("Initialization: Provider Objects Ready");
+		System.out.println("Initialization: Providers Objects Ready");
 
 		// ---------- Hosts
-		this._hosts = new Host[_config.getHosts_number()];
+		this._hosts = new Host[hosts_number];
 		for (int i = 0; i < _hosts.length; i++) {
 			_hosts[i] = new Host(i, _config);
 		}
-		System.out.println("Initialization: Host Objects Ready");
+		System.out.println("Initialization: Hosts Objects Ready");
 
 		// Clone Remote Cloud information
 
@@ -177,11 +179,12 @@ public class Simulator {
 		newServiceRequest.setSlotStart(slot2AddService);
 		newServiceRequest.setSlotEnd(slot2RemoveService);
 
-		_slots[slot2AddService].getServiceRequests2Activate()[providerID].add(newServiceRequest);
-
-		if (slot2RemoveService < _config.getSlotsNumber()) {
+		if (slot2AddService < _config.getSlotsNumber())
+			_slots[slot2AddService].getServiceRequests2Activate()[providerID].add(newServiceRequest);
+		
+		if (slot2RemoveService < _config.getSlotsNumber()) 
 			_slots[slot2RemoveService].getServiceRequests2Remove()[providerID].add(newServiceRequest);
-		}
+		
 
 		return slot2AddService;
 
@@ -229,7 +232,7 @@ public class Simulator {
 		int max = 0;
 		Double value;
 
-		String lifetime_type = (String) _config.getArrivals_generator()[providerID][serviceID].get("lifetime_type");
+		String lifetime_type = (String) _config.getLifetime_generator()[providerID][serviceID].get("lifetime_type");
 
 		switch (EGeneratorType.valueOf(lifetime_type)) {
 		case Exponential:

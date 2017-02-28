@@ -23,7 +23,7 @@ public class SchedulerData {
     public int R; // # of physical resources per physical machine
     public double[] phi; // fairness weight per provider
     public double[][] m; // m[vmtype][res]: amount of each res res for each VM vmtype vmtype
-    public double[][] p; // p[host][res]: capacity of each res res at each AP host
+    public int[][] p; // p[host][res]: capacity of each res res at each AP host
     public double[][] pen; // pen[j][s] penalty for not satisfying locally a request for service s of provider j
     public int[][][] A; // A[j][vmtype][s]: # of new requests for VMs of vmtype vmtype for service s of provider j
     public int[][][][] D; // D[host][j][vmtype][s]: # of removed VMs of vmtype vmtype for service s of provider j from AP host
@@ -98,22 +98,22 @@ public class SchedulerData {
                     m[vmtype][res] = config.getVm_bandwidth()[vmtype];
                 
             }
-        // 3- p[host][res]: capacity of each res res at each AP host
-        p = new double[N][R];
+        // 3- p[host][res]: capacity of each res res at each host
+        p = new int[N][R];
         
         for (int host=0;host<N;host++)
             for (int res=0;res<R;res++){
                 
                 if(res==0)
-                    p[host][res] = (double) config.getHost_machine_config()[host].get("cpu_cores");
+                    p[host][res] = Integer.valueOf((String) config.getHost_machine_config()[host].get("cpu_cores"));
                 else if(res==1)
-                    p[host][res] = (double) config.getHost_machine_config()[host].get("cpu_power");
+                    p[host][res] = Integer.valueOf((String) config.getHost_machine_config()[host].get("cpu_power"));
                 else if(res==2)
-                    p[host][res] = (double) config.getHost_machine_config()[host].get("cpu_memory");
+                    p[host][res] = Integer.valueOf((String) config.getHost_machine_config()[host].get("memory"));
                 else if(res==3)
-                    p[host][res] = (double) config.getHost_machine_config()[host].get("storage");
+                    p[host][res] = Integer.valueOf((String) config.getHost_machine_config()[host].get("storage"));
                 else if(res==4)
-                    p[host][res] = (double) config.getHost_machine_config()[host].get("bandwidth");
+                    p[host][res] = Integer.valueOf((String) config.getHost_machine_config()[host].get("bandwidth"));
                 
             }
         
@@ -199,22 +199,22 @@ public class SchedulerData {
         }
     }
     
-    public int[] f(SchedulerData data, int j,int s )
+    public int[] f(int j,int s )
     {
         try {
             
-            int W = -data.r[j][s];
+            int W = -this.r[j][s];
             
             System.out.println("Requests: "+W);
-            double v[] = new double[data.V];
-            double w[] = new double[data.V];
-            double weights[] = new double[data.V];
-            int[] indexes = new int[data.V];
-            int[] toReturn = new int[data.V];
+            double v[] = new double[this.V];
+            double w[] = new double[this.V];
+            double weights[] = new double[this.V];
+            int[] indexes = new int[this.V];
+            int[] toReturn = new int[this.V];
             
-            for (int i=0;i<data.w.length;i++)
+            for (int i=0;i<this.w.length;i++)
             {
-                v[i] = -data.w[i];
+                v[i] = -this.w[i];
                 w[i] = -ksi(s, j, i);
                 weights[i] = v[i]/w[i];
                 indexes[i] = i;

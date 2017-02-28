@@ -85,9 +85,9 @@ public class WebUtilities {
 
 	public Boolean destroyService(Hashtable parameters) throws IOException {
 
-		String uri = "http://localhost:5004/jox/slice/stack/machines?slice=default-slice&stack=default-stack";
+		String uri = "http://localhost:5004/jox/slice/stack/services?slice=default-slice&stack=default-stack";
 
-		String service_name = String.valueOf(parameters.get("vm_name"));
+		String service_name = String.valueOf(parameters.get("service_name"));
 		
 		
 		String json="{ \"destroy-services-list\": [{\"stack-service-name\": \""+service_name+"\"}";
@@ -111,7 +111,70 @@ public class WebUtilities {
 	
 	}
 
+	public Boolean deployService(Hashtable parameters) throws IOException {
+
+		String uri = "http://localhost:5004/jox/slice/stack/services?slice=default-slice&stack=default-stack";
+
+		String service_name = String.valueOf(parameters.get("service_name"));
+		String charm_name = String.valueOf(parameters.get("charm_name"));
+		String vm_name = String.valueOf(parameters.get("vm_name"));
+		
+		
+		String json="{\"services-list\": [{\"stack-service-name\": \""+service_name+"\","
+				+ "\"description\": \"add description\",\"charm\": \""+charm_name+"\","
+				+ "\"max-units\": 1,\"kvm-machine-to-deploy\": \""+vm_name+"\",\"lxc-machine-to-deploy\": \"\","
+			    + "\"units-to-deploy\": 1,\"config-to-deploy\":{},\"kvm-machines-units\":[]}]";
+		
+		try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
+			HttpPost request = new HttpPost(uri);
+			StringEntity params = new StringEntity(json);
+			request.addHeader("content-type", "application/json");
+			request.setEntity(params);
+			HttpResponse result = httpClient.execute(request);
+			json = EntityUtils.toString(result.getEntity(), "UTF-8");
+
+			System.out.println("ante na doume");
+
+
+		} catch (IOException ex) {
+			return false;
+		}
+		
+		return true;
 	
+	}
+	
+	public Boolean scaleService(Hashtable parameters) throws IOException {
+
+		String uri = "http://localhost:5004/jox/slice/stack/services?slice=default-slice&stack=default-stack";
+
+		String service_name = String.valueOf(parameters.get("service_name"));
+		String vm_name = String.valueOf(parameters.get("vm_name"));
+		
+		
+		String json="\"update-services-list\": [{\"stack-service-name\": \""+service_name+"\","
+				+ "\"kvm-machines-units\":[{\"stack-machine-name\": \""+vm_name+"\","
+						+ "\"add-units\": 1,\"remove-units\": 0}}]";
+		
+		
+		try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
+			HttpPost request = new HttpPost(uri);
+			StringEntity params = new StringEntity(json);
+			request.addHeader("content-type", "application/json");
+			request.setEntity(params);
+			HttpResponse result = httpClient.execute(request);
+			json = EntityUtils.toString(result.getEntity(), "UTF-8");
+
+			System.out.println("ante na doume");
+
+
+		} catch (IOException ex) {
+			return false;
+		}
+		
+		return true;
+	
+	}
 	
 	
 	

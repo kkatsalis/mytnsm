@@ -15,8 +15,10 @@ import Enumerators.EAlgorithms;
 import Enumerators.EStatsUpdateMethod;
 import Utilities.Utilities;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -77,8 +79,9 @@ public class Controller {
 
 	private void initializeController() {
 
-		this._webRequestSlotStats = new WebRequestStatsSlot[_config
-		                                                    .getSlotsNumber()][providers_number][services_number];
+		this._webRequestSlotStats = new WebRequestStatsSlot[_config.getSlotsNumber()][providers_number][services_number];
+		this._webRequestPattern = new int[providers_number][services_number];
+		
 		for (int slot = 0; slot < slots_number; slot++) {
 			for (int p = 0; p < this.providers_number; p++) {
 				for (int s = 0; s < this.services_number; s++) {
@@ -89,7 +92,7 @@ public class Controller {
 
 		for (int p = 0; p < this.providers_number; p++) {
 			for (int s = 0; s < this.services_number; s++) {
-				_webRequestPattern[p][s] = (Integer) _config.getArrivals_generator()[p][s].get("estimated_requests");
+				_webRequestPattern[p][s] = (int) _config.getArrivals_generator()[p][s].get("estimated_requests");
 			}
 		}
 
@@ -156,10 +159,10 @@ public class Controller {
 
 			// ----------- Update Statistics Object
 			double net_benefit = cplexResponse.getNetBenefit();
-			updateDbStatisticsObject(vmRequestMatrix, activationMatrix, net_benefit, slot, _cplexData);
+			updateWebStatisticsObject(vmRequestMatrix, activationMatrix, net_benefit, slot, _cplexData);
 
 			// ----------- Create VMs Actual or Objects)
-			createAllServices(activationMatrix);
+			createAllServices(slot,activationMatrix);
 
 		} catch (Exception ex) {
 			Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
@@ -275,7 +278,7 @@ public class Controller {
 		int providerID = _serviceRequest.getProviderID();
 
 		// Solves the VM mapping problem
-		int[] _vms = _cplexData.f(_cplexData, providerID, serviceID);
+		int[] _vms = _cplexData.f(providerID, serviceID);
 
 		for (int v = 0; v < _vms.length; v++) {
 			_serviceRequest.getVms_requested()[v] = _vms[v];
@@ -285,7 +288,7 @@ public class Controller {
 
 	}
 
-	private void createAllServices(int[][][][] activation_matrix) {
+	private void createAllServices(int slot,int[][][][] activation_matrix) {
 		LoadService load_service_object;
 		Thread thread;
 		int vms_number = 0;
@@ -298,7 +301,7 @@ public class Controller {
 							vms_number = activation_matrix[i][p][v][s];
 
 							while (vms_number > 0) {
-								load_service_object = new LoadService(i,p, v, s,vms_number);
+								load_service_object = new LoadService(_config,slot,i,p, v, s,vms_number);
 								thread = new Thread(load_service_object);
 								thread.start();
 								Thread.sleep(0);
@@ -318,11 +321,13 @@ public class Controller {
 
 	private void destroyServices(int slot) throws InterruptedException {
 
+		String service_name="";
 		for (int p = 0; p < providers_number; p++) {
 
 			for (ServiceRequest request : _slots[slot].getServiceRequests2Remove()[p]) {
 
-				DestroyService deleter = new DestroyService(request);
+				service_name=Utilities.getServiceName(_config,request.slotStart, p, request.serviceID);
+				DestroyService deleter = new DestroyService(service_name);
 				Thread thread = new Thread(deleter);
 				thread.start();
 				Thread.sleep(5000);
@@ -438,19 +443,20 @@ public class Controller {
 		return activationMatrix;
 	}
 
-	private void updateDbStatisticsObject(int[][][] vmRequestMatrix, int[][][][] activationMatrix, double netBenefit,
+	private void updateWebStatisticsObject(int[][][] vmRequestMatrix, int[][][][] activationMatrix, double netBenefit,
 			int slot, SchedulerData data) {
 		// tbd
 	}
 
+	
 	class DestroyService implements Runnable {
 
 		private String threadName;
 		private String service_name;
 		private Boolean deleted = false;
 		
-		DestroyService(ServiceRequest request) {
-			service_name=request.getService_name();
+		DestroyService(String service_name) {
+			this.service_name=service_name;
 		}
 
 		@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -483,34 +489,28 @@ public class Controller {
 	public class LoadService implements Runnable {
 
 		String thread_name;
-		int host_identifier;
 
 		public boolean loaded = false;
 
-		String vm_type="";
+		String vm_type_name="";
 		String vm_name="";
-		String vm_series="trusty";
+		String vm_series="";
+		String service_name;
+		String charm_name="";
+		int vms_number;
+		
+		List<String> vm_names_list;
+		LoadService(Configuration config,int slot,int host_id, int provider_id,int vm_id,int service_id, int vms_number) {
 
-		LoadService(int host_id, int vm_id, int provider_id,int service_id, int index) {
-
-
-			switch (vm_id) {
-			case 0:
-				vm_name="kvm-small";
-				break;
-			case 1:
-				vm_name="kvm-medium";
-				break;
-			case 2:
-				vm_name="kvm-large";
-				break;
-
-			default:
-				break;
-			}
-			this.vm_name= host_id+"_"+vm_id+"_"+provider_id+"_"+service_id+"_"+index;
+			this.service_name=Utilities.buildServiceName(config,slot, provider_id, service_id);
+			this.charm_name=config.getService_charm()[service_id];
+			this.vm_type_name=Utilities.getVMTypeName(vm_id);
+			this.vm_name= slot+"_h"+host_id+"_p"+provider_id+"_v"+vm_id+"_s"+service_id+"_";
+			this.vm_series=config.getVm_series();
+			this.vms_number=vms_number;
 			this.thread_name = "thread_"+vm_name;
-
+			this.vm_names_list=new ArrayList<String>();
+			
 			System.out.println("Creating " + thread_name);
 		}
 
@@ -520,16 +520,40 @@ public class Controller {
 			try {
 
 				System.out.println("Load VM Thread: " + thread_name + " started");
+				Hashtable parameters;
+				// Deploy VMs
+				for (int i = 0; i < vms_number; i++) {
+					
+					vm_name+=i;
+					vm_names_list.add(vm_name);
+					
+					parameters=new Hashtable();
+					parameters.put("vm_name",vm_name);
+					parameters.put("vm_series",vm_series);
+					parameters.put("vm_type",vm_type_name);
 
-				Hashtable parameters=new Hashtable();
-
-				parameters.put("vm_name",vm_name);
-				parameters.put("vm_series",vm_series);
-				parameters.put("vm_type",vm_type);
-
-				boolean vm_created  = _webUtilities.createVM(parameters);
-				System.out.println("vm_created:" + vm_created );	
-
+					boolean vm_created  = _webUtilities.createVM(parameters);
+					System.out.println("vm_created:" + vm_created );	
+	
+				}
+				
+				
+				
+				// Deploy Service in VM 0
+				for (int i = 0; i < vm_names_list.size(); i++) {
+					parameters=new Hashtable();
+					parameters.put("service_name",service_name);
+					parameters.put("vm_name",vm_names_list.get(i));
+					parameters.put("charm_name",charm_name);
+					
+					if(i==0) // Deploy in the first VM
+						_webUtilities.deployService(parameters);
+					else // Add units for the rest
+						_webUtilities.scaleService(parameters);
+				}
+				
+				
+				
 				Thread.sleep(0);
 
 			} catch (Exception e) {

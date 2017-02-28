@@ -27,41 +27,16 @@ public class Utilities {
 		return randomNum;
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static Hashtable determineVMparameters(Configuration config, int host_identifier, int vm_type, int service_id) {
-
-		Hashtable parameters = new Hashtable();
-
-		String host_ip = (String) config.getHost_machine_config()[host_identifier].get("ip");
-		String vm_os = config.getVm_os();
-
-		int vm_cpu_power = config.getVm_cpu_power()[vm_type];
-		int vm_cpu_cores= config.getVm_cpu_cores()[vm_type];
-		int vm_memory = config.getVm_memory()[vm_type];
-		int vm_storage = config.getVm_storage()[vm_type];
-		int vm_bandwidth = config.getVm_bandwidth()[vm_type];
-
-		parameters.put("host_ip", host_ip);
-		parameters.put("vm_os", vm_os);
-		parameters.put("vm_cpu_power", vm_cpu_power);
-		parameters.put("vm_cpu_cores", vm_cpu_cores);
-		parameters.put("vm_memory", vm_memory);
-		parameters.put("vm_storage", vm_storage);
-		parameters.put("vm_bandwidth", vm_bandwidth);
-
-		return parameters;
-
-	}
 
 	public static Connection connect() {
 		Connection conn = null;
 		try {
 			// db parameters
-			String url = "jdbc:sqlite:activations_stats.db";
+			String url = "jdbc:sqlite:tnsm_db";
 			// create a connection to the database
 			conn = DriverManager.getConnection(url);
 
-			System.out.println("Connection to SQLite has been established.");
+//			System.out.println("Connection to SQLite has been established.");
 
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
@@ -85,8 +60,11 @@ public class Utilities {
 					for (int s = 0; s < services_number; s++) {
 						vms_number = activation_matrix[n][p][v][s];
 
-						try (Connection conn = connect();
-								PreparedStatement pstmt = conn.prepareStatement(sql)) {
+						try{
+							Connection conn = connect();
+
+							PreparedStatement pstmt = conn.prepareStatement(sql); 
+							
 							pstmt.setInt(1, slot);
 							pstmt.setString(2, algorithm);
 							pstmt.setInt(3, n);
@@ -108,14 +86,14 @@ public class Utilities {
 	public static void updateRequestStats(int slot, int p, int v,int s, int vms) {	
 
 		String sql = "INSERT INTO VM_REQUESTS_STATS(slot, provider_id,vm_type_id,service_id,vms_requested) VALUES(?,?,?,?,?)";
-				
+
 		try (Connection conn = connect();
 				PreparedStatement pstmt = conn.prepareStatement(sql)) {
 			pstmt.setInt(1, slot);
-			pstmt.setInt(4, p);
-			pstmt.setInt(5, v);
-			pstmt.setInt(6, s);
-			pstmt.setInt(7, vms);
+			pstmt.setInt(2, p);
+			pstmt.setInt(3, v);
+			pstmt.setInt(4, s);
+			pstmt.setInt(5, vms);
 
 			pstmt.executeUpdate();
 		} catch (SQLException e) {
@@ -124,12 +102,51 @@ public class Utilities {
 	}
 
 
+	public static String getVMTypeName(int vm_id){
 
-public static int getRequestsMadefromDB(int slot, int p, int s) {
-	// TODO Auto-generated method stub
-	return 0;
-}
+		String vm_type_name="";
 
+		switch (vm_id) {
+		case 0:
+			vm_type_name="kvm-small";
+			break;
+		case 1:
+			vm_type_name="kvm-medium";
+			break;
+		case 2:
+			vm_type_name="kvm-large";
+			break;
+
+		default:
+			break;
+		}
+
+		return vm_type_name;
+
+	}
+
+	public static int getRequestsMadefromDB(int slot, int p, int s) {
+		// TODO Auto-generated method stub
+		return 10000;
+	}
+
+
+
+	public static String buildServiceName(Configuration config,int slot, int provider_id, int service_id) {
+
+		String alias=config.getService_alias()[service_id];
+		String service_name=slot+"_p"+provider_id+"_"+alias;
+
+		return service_name;
+	}
+
+	public static String getServiceName(Configuration config,int slot, int provider_id, int service_id) {
+
+		String alias=config.getService_alias()[service_id];
+		String service_name=slot+"_p"+provider_id+"_"+alias;
+
+		return service_name;
+	}
 
 
 
