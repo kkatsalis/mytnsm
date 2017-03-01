@@ -36,7 +36,7 @@ public class Utilities {
 			// create a connection to the database
 			conn = DriverManager.getConnection(url);
 
-//			System.out.println("Connection to SQLite has been established.");
+			//			System.out.println("Connection to SQLite has been established.");
 
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
@@ -46,7 +46,7 @@ public class Utilities {
 
 	public static void updateActivationStats(int slot, Configuration config,int[][][][] activation_matrix) {
 
-		String sql = "INSERT INTO ACTIVATION_STATS(slot,algorithm,host_id,provider_id,vm_type_id,service_id,vms_requested) VALUES(?,?,?,?,?,?,?)";
+		String sql = "INSERT INTO ACTIVATION_STATS(slot,algorithm,host_id,provider_id,vm_type_id,service_id,vms_allocated) VALUES(?,?,?,?,?,?,?)";
 		String algorithm=config.getAlgorithm();
 		int hosts_number = config.getHosts_number();
 		int providers_number = config.getProviders_number();
@@ -64,7 +64,7 @@ public class Utilities {
 							Connection conn = connect();
 
 							PreparedStatement pstmt = conn.prepareStatement(sql); 
-							
+
 							pstmt.setInt(1, slot);
 							pstmt.setString(2, algorithm);
 							pstmt.setInt(3, n);
@@ -83,22 +83,35 @@ public class Utilities {
 		}
 	}
 
-	public static void updateRequestStats(int slot, int p, int v,int s, int vms) {	
+	public static void updateRequestStats2Db(int slot, Configuration config,int[][][] vmRequestMatrix,int[][][] total_requests) {	
 
-		String sql = "INSERT INTO VM_REQUESTS_STATS(slot, provider_id,vm_type_id,service_id,vms_requested) VALUES(?,?,?,?,?)";
-
-		try (Connection conn = connect();
-				PreparedStatement pstmt = conn.prepareStatement(sql)) {
-			pstmt.setInt(1, slot);
-			pstmt.setInt(2, p);
-			pstmt.setInt(3, v);
-			pstmt.setInt(4, s);
-			pstmt.setInt(5, vms);
-
-			pstmt.executeUpdate();
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
+		String sql = "INSERT INTO RUNNING_REQUESTS(slot, provider_id,vm_type_id,service_id,vms_requested,total_requests) VALUES(?,?,?,?,?,?)";
+		int providers_number = config.getProviders_number();
+		int vm_types_number = config.getVm_types_number();
+		int services_number = config.getServices_number();
+		int vms=0;
+		int total_vms=0;
+		for (int p = 0; p < providers_number; p++) {
+			for (int v = 0; v < vm_types_number; v++) {
+				for (int s = 0; s < services_number; s++) {
+					vms=vmRequestMatrix[p][v][s];
+					total_vms=total_requests[p][v][s];
+					try (Connection conn = connect();
+						PreparedStatement pstmt = conn.prepareStatement(sql)) {
+						pstmt.setInt(1, slot);
+						pstmt.setInt(2, p);
+						pstmt.setInt(3, v);
+						pstmt.setInt(4, s);
+						pstmt.setInt(5, vms);
+						pstmt.setInt(6, total_vms);
+						pstmt.executeUpdate();
+					} catch (SQLException e) {
+						System.out.println(e.getMessage());
+					}
+				}
+			}	
 		}
+		
 	}
 
 
@@ -122,6 +135,64 @@ public class Utilities {
 		}
 
 		return vm_type_name;
+
+	}
+
+
+	@SuppressWarnings("rawtypes")
+	public static int[] getHostMaxCapacity(Configuration config, int host_id){
+
+		int resources_number=config.getResources_number();
+		int[] host_max_capacity=new int[resources_number];
+		Hashtable host_config=config.getHost_machine_config()[host_id];
+
+		for (int r = 0; r < resources_number; r++) {
+
+			switch (r) {
+			case 0:
+				host_max_capacity[r]=Integer.valueOf((String) host_config.get("cpu_cores"));
+				break;
+			case 1:
+				host_max_capacity[r]=Integer.valueOf((String) host_config.get("memory"));
+				break;
+			case 2:
+				host_max_capacity[r]=Integer.valueOf((String) host_config.get("storage"));
+				break;
+			case 3:
+				host_max_capacity[r]=Integer.valueOf((String) host_config.get("bandwidth"));
+				break;
+
+			default:
+				break;
+			}
+		}
+		return  host_max_capacity;
+
+	}
+
+	public static int getVmResourceCost(Configuration config, int vm_type, int resource_id){
+
+		int resource_cost=0;
+
+		switch (resource_id) {
+		case 0:
+			resource_cost=config.getVm_cpu_cores()[vm_type];
+			break;
+		case 1:
+			resource_cost=config.getVm_memory()[vm_type];
+			break;
+		case 2:
+			resource_cost=config.getVm_storage()[vm_type];
+			break;
+		case 3:
+			resource_cost=config.getVm_bandwidth()[vm_type];
+			break;
+
+		default:
+			break;
+		}
+
+		return resource_cost;
 
 	}
 

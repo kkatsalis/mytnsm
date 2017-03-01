@@ -24,10 +24,9 @@ public class ServiceRequest {
 	int lifetime; // in Slots
 
 	int[] vms_requested; //[v] v=0: small,1 medium, 2 large
-	int[][] vms_deployed; //[h][v] h: host, v:type
 	String service_name;
-	String charm= "cs:trusty/mysql-55";
-	String kvm_machine_to_deploy= "jk55";
+	String charm= "";
+	String kvm_machine_to_deploy= "";
 	List<String[][]> units; 
 
 	
@@ -39,7 +38,6 @@ public class ServiceRequest {
 		this.serviceID = serviceID;
 
 		this.vms_requested=new int [config.getVm_types_number()];
-		this.vms_deployed=new int [config.getVm_types_number()][config.getVm_types_number()];
 		this.service_name="";
 		this.units=new ArrayList<String[][]>();
 		
@@ -86,9 +84,6 @@ public class ServiceRequest {
 	}
 
 
-	public int[][] getVms_deployed() {
-		return vms_deployed;
-	}
 
 
 	public String getService_name() {

@@ -61,8 +61,6 @@ public class SchedulerData {
         this.A = A;
         this.D = D;
         
-        System.out.println("Method Call: Update Cplex Parameters Called");
-        
     }
     
     public void initializeArrays(){
@@ -205,7 +203,7 @@ public class SchedulerData {
             
             int W = -this.r[j][s];
             
-            System.out.println("Requests: "+W);
+            
             double v[] = new double[this.V];
             double w[] = new double[this.V];
             double weights[] = new double[this.V];

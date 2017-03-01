@@ -277,160 +277,11 @@ public class Scheduler {
     // data.m // m[vmtype][res]: amount of each res res for each VM vmtype vmtype
     // data.p // p[host][res]: capacity of each res res at each AP host
     // data.A // A[j][vmtype][s]: # of new requests for VMs of vmtype vmtype for service s of provider j  
-    public int[][][][] RunFF(SchedulerData data) {
-
-        int[][][][] activationMatrix = new int[data.N][data.P][data.V][data.S];
-
-        int[][] reservedResources;
-
-        int vmsNumber = 0;
-        boolean checkIfFits = false;
-
-        for (int p = 0; p < data.P; p++) {
-            for (int v = 0; v < data.V; v++) {
-                for (int s = 0; s < data.S; s++) {
-                    vmsNumber = data.A[p][v][s];
-
-                    int vmsNumberExamined = 0;
-
-                    while (vmsNumberExamined < vmsNumber) {
-
-                        reservedResources = updateReservedResources(data, activationMatrix);
-
-                        for (int n = 0; n < data.N; n++) {
-                            checkIfFits = checkIftheVMFits(data, reservedResources, v, n);
-
-                            if (checkIfFits) {
-                                activationMatrix[n][p][v][s]++;
-                                break;
-                            }
-                        }
-
-                        vmsNumberExamined++;
-
-                    }
-
-                }
-
-            }
-
-        }
-
-        return activationMatrix;
-
-    }
-
-    public int[][][][] RunFFRR(SchedulerData data) {
-
-        int[][][][] activationMatrix = new int[data.N][data.P][data.V][data.S];
-        int[][] reservedResources;
-
-        int vmsNumber = 0;
-        boolean checkIfFits = false;
-
-        for (int v = 0; v < data.V; v++) {
-            for (int s = 0; s < data.S; s++) {
-
-                for (int p = 0; p < data.P; p++) {
-
-                    vmsNumber = data.A[p][v][s];
-
-                    int vmsNumberExamined = 0;
-
-                    while (vmsNumberExamined < vmsNumber) {
-
-                        reservedResources = updateReservedResources(data, activationMatrix);
-
-                        for (int n = 0; n < data.N; n++) {
-                            checkIfFits = checkIftheVMFits(data, reservedResources, v, n);
-
-                            if (checkIfFits) {
-                                activationMatrix[n][p][v][s]++;
-                                break;
-                            }
-                        }
-
-                        vmsNumberExamined++;
-
-                    }
-
-                }
-
-            }
-
-        }
-
-        return activationMatrix;
-
-    }
-
-    public int[][][][] RunFF_Random(SchedulerData data) {
-
-    	int[][][][] activationMatrix = new int[data.N][data.P][data.V][data.S];
-        int[][] reservedResources;
-        List<Integer> hosts_checked=new ArrayList();
-        
-        int vmsNumber = 0;
-        boolean checkIfFits = false;
-        Random random=new Random();
-        int host;
-        
-        for (int v = 0; v < data.V; v++) {
-            for (int s = 0; s < data.S; s++) {
-
-                for (int p = 0; p < data.P; p++) {
-
-                    vmsNumber = data.A[p][v][s];
-
-                    int vmsNumberExamined = 0;
-
-                    while (vmsNumberExamined < vmsNumber) {
-
-                    	for (int n = 0; n < data.N; n++) {
-                    		hosts_checked.add(n);
-						}
-                    	
-                    	while(!hosts_checked.isEmpty()){
-                        
-                    		host=random.nextInt(data.N);
-                    		reservedResources = updateReservedResources(data, activationMatrix);
-
-                    		
-                            checkIfFits = checkIftheVMFits(data, reservedResources, v, host);
-                            hosts_checked.remove(new Integer(host));
-                            
-                            if (checkIfFits) {
-                                activationMatrix[host][p][v][s]++;
-                                break;
-                            }
-                        
-                        vmsNumberExamined++;
-                    	}
-                    }
-
-                }
-
-            }
-
-        }
-
-        return activationMatrix;
-    
-	
-    }
-
+   
     public void updateData(SchedulerData data, int[][][][] a) {
         double[][] y = new double[data.N][data.R];
         double[][] Q = new double[data.N][data.R];
 
-        System.out.println("------------------------------------Matrix to ACTIVATE-----------------------------------------------");
-        System.out.println(Arrays.deepToString(a));
-
-        System.out.println("------------------------------------Matrix to DELETE-----------------------------------------------");
-        System.out.println(Arrays.deepToString(data.D));
-
-        System.out.println("------------------------------------N Matrix BEFORE DELETION-----------------------------------------------");
-        System.out.println(Arrays.deepToString(data.n));
 
         for (int i = 0; i < data.N; i++) {
             for (int k = 0; k < data.R; k++) {
@@ -452,8 +303,8 @@ public class Scheduler {
                 y[i][k] = ssum - data.p[i][k];
                 Q[i][k] = Math.max(data.PREV_Y[i][k] + data.PREV_Q[i][k], 0);
 
-                System.out.println("y[" + i + "][" + k + "]=" + y[i][k]);
-                System.out.println("Q[" + i + "][" + k + "]=" + Q[i][k]);
+//                System.out.println("y[" + i + "][" + k + "]=" + y[i][k]);
+//                System.out.println("Q[" + i + "][" + k + "]=" + Q[i][k]);
             }
         }
         data.PREV_Q = Q;
@@ -469,10 +320,7 @@ public class Scheduler {
             }
         }
 
-        System.out.println("------------------------------------N Matrix AFTER DELETION-----------------------------------------------");
-
-        System.out.println(Arrays.deepToString(data.n));
-
+        
     }
 
     private int[][] updateReservedResources(SchedulerData data, int[][][][] activationMatrix) {

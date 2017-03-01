@@ -11,7 +11,7 @@ package Enumerators;
  * @author kostas
  */
 public enum EAlgorithms {
-    FF,
+    FirstFit,
     FFRR,
     FFRandom,
     Lyapunov

@@ -78,7 +78,7 @@ public class Simulator {
 
 		this._controller = new Controller(_config, _hosts, _slots, _providers);
 
-		addInitialServiceRequestEvents();
+		addServiceRequestEvents();
 
 		System.out.println("********** End of System Initialization Phase **************");
 		System.out.println();
@@ -137,59 +137,102 @@ public class Simulator {
 
 	}
 
-	private void addInitialServiceRequestEvents() {
+	private void addServiceRequestEvents() {
 
-		int runningSlot = 0;
+		int[][] new_running_slot = new int[providers_number][services_number] ;
 
 		for (int p = 0; p < providers_number; p++) {
 			for (int s = 0; s < services_number; s++) {
-				if (!_config.getArrivals_generator()[p][s].isEmpty())
-					CreateNewServiceRequest(p, s, runningSlot, true);
-
-				runningSlot = 0;
-
-				while (runningSlot < _config.getSlotsNumber()) {
-					runningSlot = CreateNewServiceRequest(p, s, runningSlot, false);
+				new_running_slot[p][s]=CreateInitialServiceRequest(p,s);
+			}
+		}
+		
+		for (int p = 0; p < providers_number; p++) {
+			for (int s = 0; s < services_number; s++) {
+				
+				while (new_running_slot[p][s] < _config.getSlotsNumber()) {
+					new_running_slot[p][s] = CreateNewServiceRequest(p, s, new_running_slot[p][s]);
 				}
+
+
 			}
 		}
 	}
 
 	// Returns the new running slot (this can be also 0)
-	private int CreateNewServiceRequest(int providerID, int serviceID, int currentSlot, boolean firstSlot) {
-		int slot2AddService = 0;
-		int slot2RemoveService = 0;
+	private int CreateInitialServiceRequest(int providerID, int serviceID) {
 
 		int lifetime = calculateServiceLifeTime(providerID, serviceID);
-		int slots_away;
 
 		if (lifetime < 1)
 			lifetime = 2;
 
-		if (firstSlot)
-			slots_away = 0;
-		else
-			slots_away = calculateSlotsAway(providerID, serviceID);
-
-		slot2AddService = currentSlot + slots_away;
-		slot2RemoveService = slot2AddService + lifetime;
-
 		ServiceRequest newServiceRequest = new ServiceRequest(_config,providerID, serviceID, lifetime);
 
-		newServiceRequest.setSlotStart(slot2AddService);
-		newServiceRequest.setSlotEnd(slot2RemoveService);
+		newServiceRequest.setSlotStart(0);
+		newServiceRequest.setSlotEnd(lifetime);
 
-		if (slot2AddService < _config.getSlotsNumber())
-			_slots[slot2AddService].getServiceRequests2Activate()[providerID].add(newServiceRequest);
-		
-		if (slot2RemoveService < _config.getSlotsNumber()) 
-			_slots[slot2RemoveService].getServiceRequests2Remove()[providerID].add(newServiceRequest);
-		
+		_slots[0].getServiceRequests2Activate()[providerID].add(newServiceRequest);
 
-		return slot2AddService;
+		_slots[lifetime].getServiceRequests2Remove()[providerID].add(newServiceRequest);
+
+		int slots_away = calculateSlotsAway(providerID, serviceID);
+		return slots_away;
 
 	}
 
+	private int CreateNewServiceRequest(int providerID, int serviceID, int currentSlot) {
+
+		int slot2RemoveService = 0;
+
+		int lifetime = calculateServiceLifeTime(providerID, serviceID);
+		int slots_away;
+		
+		int end_slot=checkIfServiceIsAlive(providerID, serviceID, currentSlot);
+
+		if(end_slot!=-1)
+			currentSlot=end_slot; //postpone the request until is the previous is finished
+			
+		if (lifetime < 1)
+			lifetime = 2;
+		slot2RemoveService = currentSlot + lifetime;
+
+		ServiceRequest newServiceRequest = new ServiceRequest(_config,providerID, serviceID, lifetime);
+
+		newServiceRequest.setSlotStart(currentSlot);
+		newServiceRequest.setSlotEnd(slot2RemoveService);
+
+		if (currentSlot < _config.getSlotsNumber())
+			_slots[currentSlot].getServiceRequests2Activate()[providerID].add(newServiceRequest);
+
+		if (slot2RemoveService < _config.getSlotsNumber()) 
+			_slots[slot2RemoveService].getServiceRequests2Remove()[providerID].add(newServiceRequest);
+
+		slots_away = calculateSlotsAway(providerID, serviceID);
+		return currentSlot+slots_away;
+
+	}
+	
+	
+	private int checkIfServiceIsAlive(int provider_id,int service_id, int current_slot){
+		
+		int slot2RemoveService=-1;
+		List<ServiceRequest> list;
+		
+		for (int i = current_slot; i < _slots.length; i++) {
+			list =_slots[i].getServiceRequests2Remove()[provider_id];
+			for (ServiceRequest serviceRequest : list) {
+				if(serviceRequest.serviceID==service_id)
+					slot2RemoveService=serviceRequest.getSlotEnd();
+			}
+			
+		}
+		
+		return slot2RemoveService;
+	}
+	
+	
+	
 	private int calculateSlotsAway(int providerID, int serviceID) {
 
 		int interArrivalTime = -1;
@@ -221,6 +264,9 @@ public class Simulator {
 			break;
 		}
 
+		if(interArrivalTime<1)
+			interArrivalTime=1;
+		
 		return interArrivalTime;
 
 	}

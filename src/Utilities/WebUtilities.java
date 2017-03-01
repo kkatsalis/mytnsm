@@ -75,6 +75,7 @@ public class WebUtilities {
 
 
 		} catch (IOException ex) {
+			System.out.print(ex.getCause());
 			return false;
 		}
 		
@@ -92,6 +93,7 @@ public class WebUtilities {
 		
 		String json="{ \"destroy-services-list\": [{\"stack-service-name\": \""+service_name+"\"}";
 		
+		if(false)
 		try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
 			HttpPost request = new HttpPost(uri);
 			StringEntity params = new StringEntity(json);
@@ -104,6 +106,7 @@ public class WebUtilities {
 
 
 		} catch (IOException ex) {
+			System.out.print(ex.getCause());
 			return false;
 		}
 		
