@@ -1,7 +1,12 @@
 import java.io.File;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.IOException;
 import java.lang.ProcessBuilder.Redirect;
 import java.util.Map;
+import java.util.StringTokenizer;
+import java.util.NoSuchElementException;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -40,71 +45,171 @@ public class CloudServiceClient {
 	}
 
 
-	public static void abBenchmark(int requests, int concurrency, int buffer, String url)
-	{
-		ProcessBuilder pb =
-				new ProcessBuilder("ab", "-n", ""+requests,"-c", 
-						""+concurrency, "-b", ""+buffer, url);
-		//		Map<String, String> env = pb.environment();
-		//		env.put("VAR1", "myValue");
-		//		env.remove("OTHERVAR");
-		//		env.put("VAR2", env.get("VAR1") + "suffix");
-		pb.directory(new File("."));
-		File log = new File("log");
-		pb.redirectErrorStream(true);
-		pb.redirectOutput(Redirect.appendTo(log));
-		Process p = null;
-		try {
-			p = pb.start();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		assert pb.redirectInput() == Redirect.PIPE;
-		assert pb.redirectOutput().file() == log;
-		try {
-			assert p.getInputStream().read() == -1;
 
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+/*
+CREATE TABLE table_name
+(
+column_name1 data_type(size),
+column_name2 data_type(size),
+column_name3 data_type(size),
+....
+);
+*/
+	static ABdata parseAB(InputStream is) throws IOException, NoSuchElementException 
+	{
+		BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+		String line = null;
+		StringTokenizer strtoken = null;
+		ABdata data = new ABdata();
+		boolean first = true;
+		
+		while ((line=rd.readLine()) != null)
+		{
+			strtoken = new StringTokenizer(line, ":");
+			String prompt = null;
+			if (strtoken.hasMoreTokens())
+				prompt = strtoken.nextToken();
+			else  {
+				prompt = line;
+			}
+			
+			if (prompt.equals("Complete requests")) {
+				System.out.println("Mpika complete");
+				data.completed = Integer.parseInt(strtoken.nextToken().trim());
+			} else if (prompt.equals("Failed requests")) {
+				System.out.println("Mpika failed");
+				data.failed = Integer.parseInt(strtoken.nextToken().trim());
+			} else if (prompt.equals("Requests per second")) {
+				System.out.println("Mpika requests");
+				StringTokenizer tmptoken = new StringTokenizer(strtoken.nextToken().trim());
+				data.rps = Float.parseFloat(tmptoken.nextToken().trim());
+			} else if (prompt.equals("Time per request")) {
+				System.out.println("Mpika time");
+				StringTokenizer tmptoken = new StringTokenizer(strtoken.nextToken().trim());
+				if (first) {
+					data.mtpr = Float.parseFloat(tmptoken.nextToken());
+					first = false;
+				} else {
+					data.mtprc = Float.parseFloat(tmptoken.nextToken());
+					first = true;
+				}
+			} else if (prompt.equals("Transfer rate")) {
+				System.out.println("Mpika transfer");
+				StringTokenizer tmptoken = new StringTokenizer(strtoken.nextToken().trim());
+				data.transfer_rate = Float.parseFloat(tmptoken.nextToken());
+			}/* else if (prompt.equals("Connect")) {
+				System.out.println("Mpika connect");
+			} else if (prompt.equals("Processing")) {
+				System.out.println("Mpika processing");
+			} else if (prompt.equals("Waiting")) {
+				System.out.println("Mpika wiating");
+			} */else if (prompt.equals("Total")) {
+				StringTokenizer tmptoken = new StringTokenizer(strtoken.nextToken().trim());
+				data.min_connect = Integer.parseInt(tmptoken.nextToken());
+				data.mean_connect = Float.parseFloat(tmptoken.nextToken());
+				data.sd_connect = Float.parseFloat(tmptoken.nextToken());
+				data.median_connect = Integer.parseInt(tmptoken.nextToken());
+				data.max_connect =  Integer.parseInt(tmptoken.nextToken());
+			} else if (prompt.equals("Percentage of the requests served within a certain time (ms)")) {
+				data.fractions = new int[9];
+				data.latencies = new int[9];
+				int i = 0;
+				while ((line = rd.readLine()) != null) {
+					strtoken = new StringTokenizer(line.trim());
+					StringTokenizer tmptoken = new StringTokenizer(strtoken.nextToken(), "%");
+					data.fractions[i] = Integer.parseInt(tmptoken.nextToken());
+					data.latencies[i] = Integer.parseInt(strtoken.nextToken());
+					i++;
+				}
+			}
+
+			strtoken = null;
 		}
+ 		return data;
+	}
+
+	public static void abBenchmark(final int requests, final int concurrency, final int buffer, final String url)
+	{
+		new Thread(new Runnable() {
+			public void run() { 
+
+				ProcessBuilder pb =
+						new ProcessBuilder("ab", "-n", ""+requests,"-c", 
+								""+concurrency, "-b", ""+buffer, url);
+				pb.directory(new File("."));
+				Process p = null;
+				try {
+					p = pb.start();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				try {
+					parseAB(p.getInputStream());
+
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch(NoSuchElementException e) {
+					e.printStackTrace();
+				}
+			}}).start();
 	}
 
 	public static void redisBenchmark(String ip)
 	{
-		ProcessBuilder pb =
-				new ProcessBuilder("redis-benchmark", "-h", ip);
-		//		Map<String, String> env = pb.environment();
-		//		env.put("VAR1", "myValue");
-		//		env.remove("OTHERVAR");
-		//		env.put("VAR2", env.get("VAR1") + "suffix");
-		pb.directory(new File("."));
-		File log = new File("log");
-		pb.redirectErrorStream(true);
-		pb.redirectOutput(Redirect.appendTo(log));
-		Process p = null;
-		try {
-			p = pb.start();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		assert pb.redirectInput() == Redirect.PIPE;
-		assert pb.redirectOutput().file() == log;
-		try {
-			assert p.getInputStream().read() == -1;
+		new Thread(new Runnable() {
+			public void run() { 
+				ProcessBuilder pb =
 
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+						new ProcessBuilder("redis-benchmark", "-h", ip);
+				//		Map<String, String> env = pb.environment();
+				//		env.put("VAR1", "myValue");
+				//		env.remove("OTHERVAR");
+				//		env.put("VAR2", env.get("VAR1") + "suffix");
+				pb.directory(new File("."));
+				File log = new File("log");
+				pb.redirectErrorStream(true);
+				pb.redirectOutput(Redirect.appendTo(log));
+				Process p = null;
+				try {
+					p = pb.start();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				assert pb.redirectInput() == Redirect.PIPE;
+				assert pb.redirectOutput().file() == log;
+				try {
+					assert p.getInputStream().read() == -1;
+
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}}).start();
 	}
 
 
 	public static void main(String[] args){
-		abBenchmark(50000,100, 5000, "http://10.95.196.78:80/");
+		abBenchmark(50000,100, 500, "http://10.95.196.78:80/");
 		redisBenchmark("10.95.196.143");
 
 	}
+}
+
+class ABdata {
+	int completed;
+	int failed;
+	float rps;
+	float mtpr;
+	float mtprc;
+	float transfer_rate;		
+	int min_connect;
+	float mean_connect;
+	float sd_connect;
+	int median_connect;
+	int max_connect;
+	int[] fractions;
+	int[] latencies;
 }
