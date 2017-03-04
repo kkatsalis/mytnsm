@@ -32,6 +32,7 @@ import java.util.logging.Logger;
  */
 public class Controller {
 
+	boolean enable_web=true;
 	Configuration _config;
 	Slot[] _slots;
 	Host[] _hosts;
@@ -138,7 +139,7 @@ public class Controller {
 			System.out.println("DELETE Matrix:"+Arrays.deepToString(vms2DeleteMatrix));
 			reduceRunningAllocation(vms2DeleteMatrix);
 			destroyServices(slot);
-
+			Thread.sleep(10000);
 
 			// Update WebRequest Pattern
 			// int[][] requestPattern=Utilities.findRequestPattern(_config);
@@ -175,7 +176,7 @@ public class Controller {
 			System.out.println("NET_BENEFIT: "+net_benefit);
 
 			// ----------- Create VMs Actual or Objects)
-		
+
 			createAllServices(slot,activationMatrix);
 
 		} catch (Exception ex) {
@@ -201,7 +202,6 @@ public class Controller {
 						for (int p = 0; p < this.providers_number; p++) {
 							for (int s = 0; s < this.services_number; s++) {
 								requestsMade = 0;
-
 								for (int i = index - 1; i <= slot; i++) {
 									requestsMade += Utilities.getRequestsMadefromDB(slot, p, s);
 								}
@@ -307,7 +307,7 @@ public class Controller {
 		Thread thread;
 		int vms_number = 0;
 
-		if(false){
+		if(enable_web){
 			try {
 				load_service_object = new LoadService(_config,slot,activation_matrix);
 				thread = new Thread(load_service_object);
@@ -324,8 +324,8 @@ public class Controller {
 	@SuppressWarnings("unused")
 	private void destroyServices(int slot) throws InterruptedException {
 
-	
-		if(false){
+
+		if(enable_web){
 			DestroyService deleter = new DestroyService(_slots[slot]);
 			Thread thread = new Thread(deleter);
 			thread.start();
@@ -365,7 +365,7 @@ public class Controller {
 
 		System.out.println();
 
-		
+
 		CplexResponse response = new CplexResponse(activationMatrix, netBenefit, utility, penalty);
 
 		return response;
@@ -437,7 +437,7 @@ public class Controller {
 					}
 	}	
 
-	
+
 
 
 
@@ -532,39 +532,36 @@ public class Controller {
 								vms_number = this.activation_matrix[n][p][v][s];
 								vm_names_list=new ArrayList<String>();
 
-								while (vms_number > 0) {
 
-									for (int i = 0; i < vms_number; i++) {
+								for (int i = 0; i < vms_number; i++) {
 
-										vm_name+=i;
-										vm_names_list.add(vm_name);
+									vm_name+=i;
+									vm_names_list.add(vm_name);
 
-										parameters=new Hashtable();
-										parameters.put("vm_name",vm_name);
-										parameters.put("vm_series",vm_series);
-										parameters.put("vm_type",vm_type_name);
+									parameters=new Hashtable();
+									parameters.put("vm_name",vm_name);
+									parameters.put("vm_series",vm_series);
+									parameters.put("vm_type",vm_type_name);
 
-										_webUtilities.createVM(parameters);
-										//	System.out.println("vm_created:" + vm_created );	
+									_webUtilities.createVM(parameters);
 
-									}
-
-									// Deploy Service in VM 0
-									for (int i = 0; i < vm_names_list.size(); i++) {
-										parameters=new Hashtable();
-										parameters.put("service_name",service_name);
-										parameters.put("vm_name",vm_names_list.get(i));
-										parameters.put("charm_name",charm_name);
-
-										if(i==0) // Deploy in the first VM
-											_webUtilities.deployService(parameters);
-										else // Add units for the rest
-											_webUtilities.scaleService(parameters);
-									}
-									Thread.sleep(0);
 								}
-								// Thread.sleep(5000);
-								vms_number--;
+
+								// Deploy Service in VM 0
+								for (int i = 0; i < vm_names_list.size(); i++) {
+									System.out.println("vm_names_list size"+vm_names_list.size());
+									parameters=new Hashtable();
+									parameters.put("service_name",service_name);
+									parameters.put("vm_name",vm_names_list.get(i));
+									parameters.put("charm_name",charm_name);
+
+									if(i==0) // Deploy in the first VM
+										_webUtilities.deployService(parameters);
+									else // Add units for the rest
+										_webUtilities.scaleService(parameters);
+								}
+								
+								Thread.sleep(0);
 							}
 						}
 					}

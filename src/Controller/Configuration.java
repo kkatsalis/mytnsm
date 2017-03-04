@@ -373,7 +373,7 @@ public class Configuration {
 
 		// Local Cloud VMs
 		vm_types_number = Integer.valueOf(property.getProperty("vm_types_number"));
-		vm_series= String.valueOf(property.getProperty("vm_os"));
+		vm_series= String.valueOf(property.getProperty("vm_series"));
 
 		this.vm_type_name = new String[vm_types_number];
 

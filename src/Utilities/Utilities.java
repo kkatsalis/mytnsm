@@ -206,15 +206,15 @@ public class Utilities {
 	public static String buildServiceName(Configuration config,int slot, int provider_id, int service_id) {
 
 		String alias=config.getService_alias()[service_id];
-		String service_name=slot+"_p"+provider_id+"_"+alias;
-
+		String service_name=alias+"s"+slot+"p"+provider_id;
+		
 		return service_name;
 	}
 
 	public static String getServiceName(Configuration config,int slot, int provider_id, int service_id) {
 
 		String alias=config.getService_alias()[service_id];
-		String service_name=slot+"_p"+provider_id+"_"+alias;
+		String service_name=alias+"s"+slot+"p"+provider_id;
 
 		return service_name;
 	}

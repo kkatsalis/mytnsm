@@ -17,10 +17,14 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -29,6 +33,7 @@ import org.apache.http.util.EntityUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONArray;
+import java.net.URI;
 
 /**
  *
@@ -71,7 +76,7 @@ public class WebUtilities {
 			json = EntityUtils.toString(result.getEntity(), "UTF-8");
 
 
-			System.out.println("ante na doume");
+			System.out.println("VM created:" + vm_name);
 
 
 		} catch (IOException ex) {
@@ -84,6 +89,7 @@ public class WebUtilities {
 	}
 	
 
+	@SuppressWarnings("unused")
 	public Boolean destroyService(Hashtable parameters) throws IOException {
 
 		String uri = "http://localhost:5004/jox/slice/stack/services?slice=default-slice&stack=default-stack";
@@ -91,18 +97,20 @@ public class WebUtilities {
 		String service_name = String.valueOf(parameters.get("service_name"));
 		
 		
-		String json="{ \"destroy-services-list\": [{\"stack-service-name\": \""+service_name+"\"}";
-		
-		if(false)
-		try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
-			HttpPost request = new HttpPost(uri);
+		String json="{ \"destroy-services-list\": [{\"stack-service-name\": \""+service_name+"\"}]}";
+		System.out.println(json);	
+		try{
+			
+			 CloseableHttpClient httpclient = HttpClients.createDefault();
+		     HttpDeleteWithBody httpDelete = new HttpDeleteWithBody(uri);
+			
 			StringEntity params = new StringEntity(json);
-			request.addHeader("content-type", "application/json");
-			request.setEntity(params);
-			HttpResponse result = httpClient.execute(request);
-			json = EntityUtils.toString(result.getEntity(), "UTF-8");
+			httpDelete.setEntity(params);  
+			Header requestHeaders[] = httpDelete.getAllHeaders();
+	        CloseableHttpResponse response = httpclient.execute(httpDelete);
+			json = EntityUtils.toString(response.getEntity(), "UTF-8");
 
-			System.out.println("ante na doume");
+			System.out.println("service destroyed"+service_name);
 
 
 		} catch (IOException ex) {
@@ -126,7 +134,7 @@ public class WebUtilities {
 		String json="{\"services-list\": [{\"stack-service-name\": \""+service_name+"\","
 				+ "\"description\": \"add description\",\"charm\": \""+charm_name+"\","
 				+ "\"max-units\": 1,\"kvm-machine-to-deploy\": \""+vm_name+"\",\"lxc-machine-to-deploy\": \"\","
-			    + "\"units-to-deploy\": 1,\"config-to-deploy\":{},\"kvm-machines-units\":[]}]";
+			    + "\"units-to-deploy\": 1,\"config-to-deploy\":{},\"kvm-machines-units\":[]}]}";
 		
 		try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
 			HttpPost request = new HttpPost(uri);
@@ -136,7 +144,7 @@ public class WebUtilities {
 			HttpResponse result = httpClient.execute(request);
 			json = EntityUtils.toString(result.getEntity(), "UTF-8");
 
-			System.out.println("ante na doume");
+			System.out.println("service deployed:"+service_name);
 
 
 		} catch (IOException ex) {
@@ -155,21 +163,20 @@ public class WebUtilities {
 		String vm_name = String.valueOf(parameters.get("vm_name"));
 		
 		
-		String json="\"update-services-list\": [{\"stack-service-name\": \""+service_name+"\","
+		String json="{\"update-services-list\": [{\"stack-service-name\": \""+service_name+"\","
 				+ "\"kvm-machines-units\":[{\"stack-machine-name\": \""+vm_name+"\","
-						+ "\"add-units\": 1,\"remove-units\": 0}}]";
+						+ "\"add-units\": 1,\"remove-units\": 0}]}]}";
 		
 		
 		try (CloseableHttpClient httpClient = HttpClientBuilder.create().build()) {
-			HttpPost request = new HttpPost(uri);
+			HttpPut request = new HttpPut(uri);
 			StringEntity params = new StringEntity(json);
 			request.addHeader("content-type", "application/json");
 			request.setEntity(params);
 			HttpResponse result = httpClient.execute(request);
 			json = EntityUtils.toString(result.getEntity(), "UTF-8");
 
-			System.out.println("ante na doume");
-
+			System.out.println("service scaled:"+service_name);
 
 		} catch (IOException ex) {
 			return false;
@@ -180,6 +187,27 @@ public class WebUtilities {
 	}
 	
 	
+	class HttpDeleteWithBody extends HttpEntityEnclosingRequestBase {
+	    public static final String METHOD_NAME = "DELETE";
+	 
+	    public String getMethod() {
+	        return METHOD_NAME;
+	    }
+	 
+	    public HttpDeleteWithBody(final String uri) {
+	        super();
+	        setURI(URI.create(uri));
+	    }
+	 
+	    public HttpDeleteWithBody(final URI uri) {
+	        super();
+	        setURI(uri);
+	    }
+	 
+	    public HttpDeleteWithBody() {
+	        super();
+	    }
+	}
 	
 
 
