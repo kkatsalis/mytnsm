@@ -16,6 +16,7 @@ import Enumerators.EStatsUpdateMethod;
 import Enumerators.UpdateType;
 import Utilities.Utilities;
 import java.io.IOException;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
@@ -32,7 +33,7 @@ import java.util.logging.Logger;
  */
 public class Controller {
 
-	boolean enable_web = true;
+	boolean SIMULATION_MODE = true;
 	Configuration _config;
 	Slot[] _slots;
 	Host[] _hosts;
@@ -62,13 +63,13 @@ public class Controller {
 
 	int[][][] total_requests;
 	int slot = 0;
-
+	Connection conn;
 	Controller(Configuration config, Host[] hosts, Slot[] slots, Provider[] _provider) {
 
 		this._config = config;
 		this._slots = slots;
 		this._hosts = hosts;
-
+		this.conn=Utilities.connect();
 		this.hosts_number = _config.getHosts_number();
 		this.providers_number = _config.getProviders_number();
 		this.vm_types_number = _config.getVm_types_number();
@@ -77,6 +78,7 @@ public class Controller {
 		this._webUtilities = new WebUtilities(config);
 		this._cplexData = new SchedulerData(config);
 		this._providers = _provider;
+		this.SIMULATION_MODE=config.getSimulation_mode();
 		this.running_allocations = new int[hosts_number][providers_number][vm_types_number][services_number];
 		this.generic_scheduler = new GenericScheduler(config, this);
 		initializeController();
@@ -134,7 +136,7 @@ public class Controller {
 				}
 			}
 			int[][][] vmRequestMatrix = loadVMRequestMatrix(slot);
-			Utilities.updateRequestStats2Db(slot, _config, vmRequestMatrix, total_requests);
+			Utilities.updateRequestStats2Db(conn,slot, _config, vmRequestMatrix, total_requests);
 
 			System.out.println("REQUESTS Matrix:" + Arrays.deepToString(vmRequestMatrix));
 
@@ -142,7 +144,7 @@ public class Controller {
 			int[][][][] vms2DeleteMatrix = prepareVmDeleteMatrix(slot);
 			System.out.println("DELETE Matrix:" + Arrays.deepToString(vms2DeleteMatrix));
 			reduceRunningAllocation(vms2DeleteMatrix);
-			if (!_config.getSimulation_mode()) {
+			if (!SIMULATION_MODE) {
 				destroyServices(slot);
 				Thread.sleep(10000);
 			}
@@ -166,7 +168,7 @@ public class Controller {
 				else
 					System.out.print("No scheduling algorithm is defined");
 
-				Utilities.updateActivationStats(slot, _config, activationMatrix);
+				
 
 			}
 
@@ -179,8 +181,9 @@ public class Controller {
 			double net_benefit = cplexResponse.getNetBenefit();
 			System.out.println("NET_BENEFIT: " + net_benefit);
 
+			Utilities.updateActivationStats(conn,slot, _config, activationMatrix,net_benefit);
 			// ----------- Create VMs Actual)
-			if (!_config.getSimulation_mode()) 
+			if (!SIMULATION_MODE) 
 				createAllServices(slot, activationMatrix);
 
 		} catch (Exception ex) {
@@ -320,7 +323,6 @@ public class Controller {
 		Thread thread;
 		int vms_number = 0;
 
-		if (enable_web) {
 			try {
 				load_service_object = new LoadService(_config, slot, activation_matrix);
 				thread = new Thread(load_service_object);
@@ -330,19 +332,16 @@ public class Controller {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		}
-
 	}
 
 	@SuppressWarnings("unused")
 	private void destroyServices(int slot) throws InterruptedException {
-
-		if (enable_web) {
+		
 			DestroyService deleter = new DestroyService(_slots[slot]);
 			Thread thread = new Thread(deleter);
 			thread.start();
 			Thread.sleep(5);
-		}
+		
 	}
 
 	private CplexResponse updatePenaltyAndUtility(SchedulerData data, int[][][][] activationMatrix) {
@@ -589,4 +588,12 @@ public class Controller {
 		return slot;
 	}
 
+	public Connection getConn() {
+		return conn;
+	}
+
+
+
+	
+	
 }

@@ -1,6 +1,6 @@
 package Clients;
 import Controller.Configuration;
-
+import Enumerators.EGeneratorType;
 import jsc.distributions.Exponential;
 import jsc.distributions.Pareto;
 
@@ -39,17 +39,18 @@ public class Client {
 
 		arrivalsType = (String) clients_config.getArrivals()[provider_id][service_id][client_id].get("arrivals_type");
 
-		if (arrivalsType.equals("EXPONENTIAL")) {
+		if (arrivalsType.equals(EGeneratorType.Exponential.toString())) {
 
 			lamda = (double) clients_config.getArrivals()[provider_id][service_id][client_id].get("arrivals_lamda");
 			_arrivalExpGenerator = new Exponential(lamda);
 
-		} else if (arrivalsType.equals("PARETO")) {
+		} else if (arrivalsType.equals(EGeneratorType.Pareto.toString())) {
 
 			location = Double.valueOf((String) clients_config.getArrivals()[provider_id][service_id][client_id].get("arrivals_location"));
 			shape = Double.valueOf((String) clients_config.getArrivals()[provider_id][service_id][client_id].get("arrivals_shape"));
 			__arrivalParetoGenerator = new Pareto(location, shape);
-		} else if (arrivalsType.equals("RANDOM")) {
+			
+		} else if (arrivalsType.equals(EGeneratorType.Random.toString())) {
 			_arrivals_min = (int)clients_config.getArrivals()[provider_id][service_id][client_id].get("arrivals_min");
 			_arrivals_max = (int)clients_config.getArrivals()[provider_id][service_id][client_id].get("arrivals_max");
 		}

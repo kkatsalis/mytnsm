@@ -45,17 +45,17 @@ public class FakeServers {
 
 			type = (String) clients_config.getService_time_edge()[s].get("service_time_edge_type");
 
-			if (type.equals("EXPONENTIAL")) {
+			if (type.equals("Exponential")) {
 
 				lamda = (double) clients_config.getService_time_edge()[s].get("service_time_edge_lamda");
 				_serviceEdgeExpGenerator[s] = new Exponential(lamda);
 
-			} else if (type.equals("PARETO")) {
+			} else if (type.equals("Pareto")) {
 
 				location = (double) clients_config.getService_time_edge()[s].get("service_time_edge_location");
 				shape = (double) clients_config.getService_time_edge()[s].get("service_time_edge_shape");
 				_serviceEdgeParetoGenerator[s] = new Pareto(location, shape);
-			} else if (type.equals("RANDOM")) {
+			} else if (type.equals("Random")) {
 				_service_edge_min[s] = (int) clients_config.getService_time_edge()[s].get("service_time_edge_min");
 				_service_edge_max[s] = (int) clients_config.getService_time_edge()[s].get("service_time_edge_max");
 
@@ -82,17 +82,17 @@ public class FakeServers {
 
 			type = (String) clients_config.getService_time_cloud()[s].get("service_time_cloud_type");
 
-			if (type.equals("EXPONENTIAL")) {
+			if (type.equals("Exponential")) {
 
 				lamda = (double) clients_config.getService_time_cloud()[s].get("service_time_cloud_lamda");
 				_serviceCloudExpGenerator[s] = new Exponential(lamda);
 
-			} else if (type.equals("PARETO")) {
+			} else if (type.equals("Pareto")) {
 
 				location = (double) clients_config.getService_time_cloud()[s].get("service_time_cloud_location");
 				shape = (double) clients_config.getService_time_cloud()[s].get("service_time_cloud_shape");
 				_serviceCloudParetoGenerator[s] = new Pareto(location, shape);
-			} else if (type.equals("RANDOM")) {
+			} else if (type.equals("Random")) {
 				_service_cloud_min[s] = (int) clients_config.getService_time_cloud()[s].get("service_time_cloud_min");
 				_service_cloud_max[s] = (int) clients_config.getService_time_cloud()[s].get("service_time_cloud_max");
 

@@ -6,6 +6,9 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import Controller.Configuration;
+import Enumerators.EGeneratorType;
+
 @SuppressWarnings("rawtypes")
 public class ClientsConfiguration {
 
@@ -18,13 +21,16 @@ public class ClientsConfiguration {
 	int services_number;
 
 	String filename;
-	public ClientsConfiguration() {
-
+	Configuration config;
+	
+	public ClientsConfiguration(Configuration config) {
+		this.config=config;
 		filename = "client.properties";
 		this.loadParameters();
 		this.arrivalsConfig();
 		this.serviceEdgeConfig();
 		this.serviceCloudConfig();
+		
 	}
 
 	private void loadParameters() {
@@ -41,8 +47,8 @@ public class ClientsConfiguration {
 			Logger.getLogger(ClientsConfiguration.class.getName()).log(Level.SEVERE, null, ex);
 		}
 
-		providers_number = Integer.valueOf(property.getProperty("providers_number"));
-		services_number = Integer.valueOf(property.getProperty("services_number"));
+		providers_number = config.getProviders_number();
+		services_number = config.getServices_number();
 		clients_number = Integer.valueOf(property.getProperty("clients_number"));
 
 		service_time_cloud = new Hashtable[services_number];
@@ -82,14 +88,14 @@ public class ClientsConfiguration {
 					arrivals[p][s][c].put("arrivals_type", rate_type);
 
 					// Exponential
-					if (rate_type == "EXPONENTIAL") {
+					if (rate_type.equals(EGeneratorType.Exponential.toString())) {
 
 						parameter = "provider" + p + "_service" + s + "_client" + c + "_arrivals_lamda";
 						double_value = Double.valueOf(property.getProperty(parameter));
 						double_value = (double) 1 / double_value;
 						arrivals[p][s][c].put("arrivals_lamda", double_value);
 
-					} else if (rate_type == "PARETO") {
+					} else if (rate_type.equals(EGeneratorType.Pareto.toString())) {
 
 						parameter = "provider" + p + "_service" + s + "_client" + c + "_arrivals_location";
 						double_value = Double.valueOf(property.getProperty(parameter));
@@ -99,7 +105,7 @@ public class ClientsConfiguration {
 						double_value = Double.valueOf(property.getProperty(parameter));
 						arrivals[p][s][c].put("arrivals_location", double_value);
 
-					} else if (rate_type == "RANDOM") {
+					} else if (rate_type.equals(EGeneratorType.Random.toString())) {
 
 						parameter = "provider" + p + "_service" + s + "_client" + c + "_arrivals_min";
 						int_value = Integer.valueOf(property.getProperty(parameter));
@@ -147,14 +153,13 @@ public class ClientsConfiguration {
 			service_time_edge[s].put("service_time_edge_type", rate_type);
 
 			// Exponential
-			if (rate_type == "EXPONENTIAL") {
+			if (rate_type.equals(EGeneratorType.Exponential.toString())) {
 
 				parameter = "service" + s + "_service_time_edge_lamda";
 				double_value = Double.valueOf(property.getProperty(parameter));
-				double_value = (double) 1 / double_value;
 				service_time_edge[s].put("service_time_edge_lamda", double_value);
 
-			} else if (rate_type == "PARETO") {
+			} else if (rate_type.equals(EGeneratorType.Pareto.toString())) {
 
 				parameter = "service" + s + "_service_time_edge_location";
 				double_value = Double.valueOf(property.getProperty(parameter));
@@ -164,7 +169,7 @@ public class ClientsConfiguration {
 				double_value = Double.valueOf(property.getProperty(parameter));
 				service_time_edge[s].put("service_time_edge_shape", double_value);
 
-			} else if (rate_type == "RANDOM") {
+			} else if (rate_type.equals(EGeneratorType.Random.toString())) {
 
 				parameter = "_service" + s + "_service_time_edge_min";
 				int_value = Integer.valueOf(property.getProperty(parameter));
@@ -209,14 +214,13 @@ private void serviceCloudConfig() {
 		service_time_cloud[s].put("service_time_cloud_type", rate_type);
 
 		// Exponential
-		if (rate_type == "EXPONENTIAL") {
+		if (rate_type.equals(EGeneratorType.Exponential.toString())) {
 
 			parameter = "service" + s + "_service_time_cloud_lamda";
 			double_value = Double.valueOf(property.getProperty(parameter));
-			double_value = (double) 1 / double_value;
 			service_time_cloud[s].put("service_time_cloud_lamda", double_value);
 
-		} else if (rate_type == "PARETO") {
+		} else if (rate_type.equals(EGeneratorType.Pareto.toString())) {
 
 			parameter = "service" + s + "_service_time_cloud_location";
 			double_value = Double.valueOf(property.getProperty(parameter));
@@ -226,7 +230,7 @@ private void serviceCloudConfig() {
 			double_value = Double.valueOf(property.getProperty(parameter));
 			service_time_cloud[s].put("service_time_cloud_shape", double_value);
 
-		} else if (rate_type == "RANDOM") {
+		} else if (rate_type.equals(EGeneratorType.Random.toString())) {
 
 			parameter = "service" + s + "_service_time_cloud_min";
 			int_value = Integer.valueOf(property.getProperty(parameter));

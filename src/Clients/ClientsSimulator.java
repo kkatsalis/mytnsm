@@ -30,7 +30,7 @@ public class ClientsSimulator {
 	public ClientsSimulator(Configuration config, Controller controller) {
 		this.config = config;
 		this.controller = controller;
-		this.clients_config = new ClientsConfiguration();
+		this.clients_config = new ClientsConfiguration(config);
 		this.providers_number = config.getProviders_number();
 		this.clients_number = clients_config.getClients_number();
 		this.services_number = config.getServices_number();
@@ -41,6 +41,7 @@ public class ClientsSimulator {
 			for (int s = 0; s < services_number; s++) {
 				for (int c = 0; c < clients_number; c++) {
 					clients[p][s][c] = new Client(p, s, c, config, clients_config);
+					clientsTimer[p][s][c]=new Timer();
 				}
 			}
 		}
@@ -54,11 +55,7 @@ public class ClientsSimulator {
 			for (int s = 0; s < services_number; s++) {
 				for (int c = 0; c < clients_number; c++) {
 					clientsTimer[p][s][c].schedule(new ExecuteClientRequest(controller, config, clients_config,
-							clientsTimer, clients, p, s, c), 100); // Start the
-																	// Client
-																	// Requests
-																	// (initial
-																	// delay
+							clientsTimer, clients, p, s, c), 100); 
 					// 100)
 				}
 			}
@@ -79,7 +76,7 @@ class ExecuteClientRequest extends TimerTask {
 	Timer[][][] clientsTimer;
 	Controller controller;
 	FakeServers fake_servers;
-	static int requests[][];
+	int requests[][];
 
 	public ExecuteClientRequest(Controller controller, Configuration config, ClientsConfiguration clients_config,
 			Timer[][][] clientsTimer, Client[][][] clients, int providerID, int serviceID, int clientID) {
@@ -171,29 +168,14 @@ class ExecuteClientRequest extends TimerTask {
 
 	}
 
-	public static Connection connect() {
-		Connection conn = null;
-		try {
-			// db parameters
-			String url = "jdbc:sqlite:tnsm_db";
-			// create a connection to the database
-			conn = DriverManager.getConnection(url);
-
-			// System.out.println("Connection to SQLite has been established.");
-
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
-		}
-		return conn;
-	}
-
-	public static void sendClientStatsToDB(int slot, int provider_id, int service_id, int client_id, int request,
+	
+	public void sendClientStatsToDB(int slot, int provider_id, int service_id, int client_id, int request,
 			double response_time) {
 
-		String sql = "INSERT INTO CLIENT_STATS(slot,provider_id,service_id,client_id,request,response_time) VALUES(?,?,?,?,?,?)";
+		String sql = "INSERT INTO STATS_CLIENTS(slot,provider_id,service_id,client_id,request,response_time) VALUES(?,?,?,?,?,?)";
 
 		try {
-			Connection conn = connect();
+			Connection conn =controller.getConn(); 
 
 			PreparedStatement pstmt = conn.prepareStatement(sql);
 

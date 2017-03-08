@@ -44,9 +44,9 @@ public class Utilities {
 		return conn;
 	}
 
-	public static void updateActivationStats(int slot, Configuration config,int[][][][] activation_matrix) {
+	public static void updateActivationStats(Connection conn,int slot, Configuration config,int[][][][] activation_matrix, double benefit) {
 
-		String sql = "INSERT INTO ACTIVATION_STATS(slot,algorithm,host_id,provider_id,vm_type_id,service_id,vms_allocated) VALUES(?,?,?,?,?,?,?)";
+		String sql = "INSERT INTO STATS_ACTIVATION(slot,algorithm,host_id,provider_id,vm_type_id,service_id,vms_allocated,benefit) VALUES(?,?,?,?,?,?,?,?)";
 		String algorithm=config.getAlgorithm();
 		int hosts_number = config.getHosts_number();
 		int providers_number = config.getProviders_number();
@@ -61,8 +61,6 @@ public class Utilities {
 						vms_number = activation_matrix[n][p][v][s];
 
 						try{
-							Connection conn = connect();
-
 							PreparedStatement pstmt = conn.prepareStatement(sql); 
 
 							pstmt.setInt(1, slot);
@@ -72,6 +70,8 @@ public class Utilities {
 							pstmt.setInt(5, v);
 							pstmt.setInt(6, s);
 							pstmt.setInt(7, vms_number);
+							pstmt.setDouble(8, benefit);
+							
 
 							pstmt.executeUpdate();
 						} catch (SQLException e) {
@@ -83,7 +83,7 @@ public class Utilities {
 		}
 	}
 
-	public static void updateRequestStats2Db(int slot, Configuration config,int[][][] vmRequestMatrix,int[][][] total_requests) {	
+	public static void updateRequestStats2Db(Connection conn,int slot, Configuration config,int[][][] vmRequestMatrix,int[][][] total_requests) {	
 
 		String sql = "INSERT INTO RUNNING_SERVICE_REQUESTS(slot, provider_id,vm_type_id,service_id,vms_requested,total_requests) VALUES(?,?,?,?,?,?)";
 		int providers_number = config.getProviders_number();
@@ -96,8 +96,8 @@ public class Utilities {
 				for (int s = 0; s < services_number; s++) {
 					vms=vmRequestMatrix[p][v][s];
 					total_vms=total_requests[p][v][s];
-					try (Connection conn = connect();
-						PreparedStatement pstmt = conn.prepareStatement(sql)) {
+					try {
+						PreparedStatement pstmt = conn.prepareStatement(sql);
 						pstmt.setInt(1, slot);
 						pstmt.setInt(2, p);
 						pstmt.setInt(3, v);
