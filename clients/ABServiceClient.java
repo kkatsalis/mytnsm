@@ -281,46 +281,6 @@ public class ABServiceClient implements Runnable {
 	}
 }
 
-class ClientThread extends Thread
-{
-	float request_rate;
-	int concurrent_requests;
-	long duration;
-	Runnable serviceThread;
-
-	ClientThread(float request_rate, int concurrent, long duration, Runnable serviceThread)
-	{
-		this.request_rate = request_rate; // Poisson mean request rate in requests per second
-		this.concurrent_requests = concurrent;
-		this.duration = duration;
-		this.serviceThread = serviceThread;
-	}
-
-	public void run() {
-		long startTime = System.currentTimeMillis();
-		long endTime = startTime + duration;
-		long interarrival = 0;
-		long total_requests = 0;
-		long time = System.currentTimeMillis();
-
-		while (time<endTime) { 
-			try {
-				new Thread(serviceThread).start();
-
-				total_requests += concurrent_requests;
-				interarrival = Math.round(-1000*(Math.log(Math.random())/Math.log(Math.E))/(request_rate/concurrent_requests));
-				System.out.println("SLEEP TIME: "+interarrival);
-
-				Thread.sleep(interarrival);
-			} catch(InterruptedException e) {
-				e.printStackTrace();
-			}
-			time = System.currentTimeMillis();
-		}
-
-		System.out.println("MEAN REQUEST RATE : "+(total_requests/20.0));
-	}
-}
 
 class ABdata {
 	Timestamp ts;

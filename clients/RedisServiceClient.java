@@ -65,19 +65,12 @@ public class RedisServiceClient implements Runnable {
 				" requests, "+
 				" concurrency, "+ 
 				" request_rate, "+
-				" completed, " +
-				" failed, " +
-				" rps, "+
-				" mtpr, "+
-				" mtprc, "+
-				" transfer_rate, "+		
-				" min_connect, "+
-				" mean_connect, "+
-				" sd_connect, "+
-				" median_connect, "+
-				" max_connect, "+
-				" fractions, "+
-				" latencies) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+				" set_completed, " +
+				" set_percentiles, " +
+				" set_latencies, "+
+				" get_completed, "+
+				" get_percentiles, "+
+				" get_latencies) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)";
 
 		try {
 			if (conn == null) connectDB();
@@ -90,30 +83,12 @@ public class RedisServiceClient implements Runnable {
 			pstmt.setInt(4, data.requests);
 			pstmt.setInt(5, data.concurrency);
 			pstmt.setFloat(6, data.request_rate);
-			pstmt.setInt(7, data.completed);
-			pstmt.setInt(8, data.failed);
-			pstmt.setFloat(9, data.rps);
-			pstmt.setFloat(10, data.mtpr);
-			pstmt.setFloat(11, data.mtprc);
-			pstmt.setFloat(12, data.transfer_rate);
-			pstmt.setInt(13, data.min_connect);
-			pstmt.setFloat(14, data.mean_connect);
-			pstmt.setFloat(15, data.sd_connect);
-			pstmt.setInt(16, data.median_connect);
-			pstmt.setInt(17, data.max_connect);
-			
-			String tmp = "";
-			for (int i=0;i<data.fractions.length-1;i++)
-				tmp += data.fractions[i] +",";
-			tmp += data.fractions[data.fractions.length-1];
-			pstmt.setString(18, tmp);
-			
-			tmp = "";
-			for (int i=0;i<data.latencies.length-1;i++)
-				tmp += data.latencies[i] +",";
-			tmp += data.latencies[data.latencies.length-1];
-			
-			pstmt.setString(19, tmp);
+			pstmt.setInt(7, data.set_completed);
+			pstmt.setString(8, data.set_percentiles);
+			pstmt.setString(9, data.set_latencies);
+			pstmt.setInt(10, data.get_completed);
+			pstmt.setString(11, data.get_percentiles);
+			pstmt.setString(12, data.get_latencies);
 			
 			pstmt.executeUpdate();
 			
@@ -132,77 +107,75 @@ public class RedisServiceClient implements Runnable {
 		String line = null;
 		StringTokenizer strtoken = null;
 		RedisData data = new RedisData();
-		boolean first = true;
+		String category = "";
+		data.set_percentiles = "";
+		data.get_percentiles = "";
+		data.set_latencies = "";
+		data.get_latencies = "";
 		
-		while ((line=rd.readLine()) != null)
-		{
-			strtoken = new StringTokenizer(line, ":");
-			String prompt = null;
-			if (strtoken.hasMoreTokens())
-				prompt = strtoken.nextToken();
-			else  {
-				prompt = line;
-			}
-			
-			if (prompt.equals("Concurrency Level")) {
-				//System.out.println("Mpika concurrency");
-				data.concurrency = Integer.parseInt(strtoken.nextToken().trim());
-			} else if (prompt.equals("Complete requests")) {
-				//System.out.println("Mpika complete");
-				data.completed = Integer.parseInt(strtoken.nextToken().trim());
-			} else if (prompt.equals("Failed requests")) {
-				//System.out.println("Mpika failed");
-				data.failed = Integer.parseInt(strtoken.nextToken().trim());
-			} else if (prompt.equals("Requests per second")) {
-				//System.out.println("Mpika requests");
-				StringTokenizer tmptoken = new StringTokenizer(strtoken.nextToken().trim());
-				data.rps = Float.parseFloat(tmptoken.nextToken().trim());
-			} else if (prompt.equals("Time per request")) {
-				//System.out.println("Mpika time");
-				StringTokenizer tmptoken = new StringTokenizer(strtoken.nextToken().trim());
-				if (first) {
-					data.mtpr = Float.parseFloat(tmptoken.nextToken());
-					first = false;
-				} else {
-					data.mtprc = Float.parseFloat(tmptoken.nextToken());
-					first = true;
+		while ((line=rd.readLine().trim()) != null)
+		{	
+			if (line.equals(""))
+				continue;
+			else if (line.equals("====== SET ======")) {
+				//System.out.println("Mpika set");
+				category = "SET";
+			} else if (line.equals("====== GET ======")) {
+				category = "GET";
+			} else if (category.equals("SET")) {
+				//System.out.println("Mpika set");
+				strtoken = new StringTokenizer(line);
+				try {
+					String first = strtoken.nextToken();
+					String second = strtoken.nextToken();
+					
+					if (second.equals("requests"))
+					{
+						data.requests = Integer.parseInt(first);
+						data.set_completed = Integer.parseInt(first);
+					} else if (second.equals("parallel")) 
+						data.concurrency = Integer.parseInt(first);
+					else if (second.equals("bytes") || second.equals("alive"))
+						continue;
+					else if (second.equals("<=")) {
+						StringTokenizer tmpToken = new StringTokenizer(first,"%");
+						
+						data.set_percentiles += tmpToken.nextToken()+",";
+						data.set_latencies += strtoken.nextToken()+",";
+					} 
+				} catch(NoSuchElementException e)
+				{
+					System.out.println("Malformed redis-benchmark output");
 				}
-			} else if (prompt.equals("Transfer rate")) {
-				//System.out.println("Mpika transfer");
-				StringTokenizer tmptoken = new StringTokenizer(strtoken.nextToken().trim());
-				data.transfer_rate = Float.parseFloat(tmptoken.nextToken());
-			}/* else if (prompt.equals("Connect")) {
-				System.out.println("Mpika connect");
-			} else if (prompt.equals("Processing")) {
-				System.out.println("Mpika processing");
-			} else if (prompt.equals("Waiting")) {
-				System.out.println("Mpika wiating");
-			} */else if (prompt.equals("Total")) {
-				StringTokenizer tmptoken = new StringTokenizer(strtoken.nextToken().trim());
-				data.min_connect = Integer.parseInt(tmptoken.nextToken());
-				data.mean_connect = Float.parseFloat(tmptoken.nextToken());
-				data.sd_connect = Float.parseFloat(tmptoken.nextToken());
-				data.median_connect = Integer.parseInt(tmptoken.nextToken());
-				data.max_connect =  Integer.parseInt(tmptoken.nextToken());
-			} else if (prompt.equals("Percentage of the requests served within a certain time (ms)")) {
-				data.fractions = new Integer[9];
-				data.latencies = new Integer[9];
-				int i = 0;
-				while ((line = rd.readLine()) != null) {
-					strtoken = new StringTokenizer(line.trim());
-					StringTokenizer tmptoken = new StringTokenizer(strtoken.nextToken(), "%");
-					data.fractions[i] = Integer.parseInt(tmptoken.nextToken());
-					data.latencies[i] = Integer.parseInt(strtoken.nextToken());
-					i++;
+			} else if (category.equals("GET")) {
+				//System.out.println("Mpika get");
+				strtoken = new StringTokenizer(line);
+				try {
+					String first = strtoken.nextToken();
+					String second = strtoken.nextToken();
+					
+					if (second.equals("requests"))
+					{
+						data.requests = Integer.parseInt(first);
+						data.set_completed = Integer.parseInt(first);
+					} else if (second.equals("parallel")) 
+						data.concurrency = Integer.parseInt(first);
+					else if (second.equals("bytes") || second.equals("alive"))
+						continue;
+					else if (second.equals("<=")) {
+						StringTokenizer tmpToken = new StringTokenizer(first,"%");
+						
+						data.get_percentiles += tmpToken.nextToken()+",";
+						data.get_latencies += strtoken.nextToken()+",";
+					} else if (second.equals("requests")) {
+						data.request_rate = Float.parseFloat(first);
+					}
+				} catch(NoSuchElementException e)
+				{
+					System.out.println("Malformed redis-benchmark output");
 				}
 			}
-			strtoken = null;
 		}
-		
-		Date now = new Date();
-		data.ts = new Timestamp(now.getTime());
-		
-		//System.out.println("Current time is : "+data.ts);
  		return data;
 	}
 
@@ -248,41 +221,6 @@ public class RedisServiceClient implements Runnable {
 		}
 	}
 
-	public static void redisBenchmark(String ip)
-	{
-		new Thread(new Runnable() {
-			public void run() { 
-				ProcessBuilder pb =
-
-						new ProcessBuilder("redis-benchmark", "-h", ip);
-				//		Map<String, String> env = pb.environment();
-				//		env.put("VAR1", "myValue");
-				//		env.remove("OTHERVAR");
-				//		env.put("VAR2", env.get("VAR1") + "suffix");
-				pb.directory(new File("."));
-				File log = new File("log");
-				pb.redirectErrorStream(true);
-				pb.redirectOutput(Redirect.appendTo(log));
-				Process p = null;
-				try {
-					p = pb.start();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				assert pb.redirectInput() == Redirect.PIPE;
-				assert pb.redirectOutput().file() == log;
-				try {
-					assert p.getInputStream().read() == -1;
-
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}}).start();
-	}
-
-
 	public static void main(String[] args){
 		String redTable = "CREATE TABLE REDISSTATS " +
                 "(ts TIMESTAMP not NULL, " +
@@ -291,30 +229,21 @@ public class RedisServiceClient implements Runnable {
                 " requests INTEGER not NULL, "+
             	" concurrency INTEGER not NULL, "+ 
                 " request_rate FLOAT not NULL, "+
-                " completed INTEGER not NULL, " +
-            	" failed INTEGER not NULL, " +
-            	" rps FLOAT not NULL, "+
-            	" mtpr FLOAT not NULL, "+
-            	" mtprc FLOAT not NULL, "+
-            	" transfer_rate FLOAT not NULL, "+		
-            	" min_connect INTEGER not NULL, "+
-            	" mean_connect FLOAT not NULL, "+
-            	" sd_connect FLOAT not NULL, "+
-            	" median_connect INTEGER not NULL, "+
-            	" max_connect INTEGER not NULL, "+
-            	" fractions VARCHAR(120) not NULL, "+
-            	" latencies VARCHAR(120) not NULL, "+
+                " set_completed INTEGER not NULL, " +
+            	" set_percentiles VARCHAR(120) not NULL, "+
+            	" set_latencies VARCHAR(120) not NULL, "+
+            	" get_completed INTEGER not NULL, " +
+             	" get_percentiles VARCHAR(120) not NULL, "+
+             	" get_latencies VARCHAR(120) not NULL, "+
                 " PRIMARY KEY ( TS,PROVIDER,CLIENT_ID ))"; 
-		
-		
-		
+	
 		float request_rate = 300; // Poisson mean request rate in requests per second
 		
 		int concurrent = 300;
 		
 		RedisServiceClient red = new RedisServiceClient("vodafone", "1", request_rate, concurrent, concurrent, "http://10.95.196.78:80/");
 		red.createTable(redTable);
-		red.start();
+		new Thread(red).start();
 
 	}
 }
@@ -326,17 +255,10 @@ class RedisData {
 	int requests;
 	int concurrency;
 	float request_rate;
-	int completed;
-	int failed;
-	float rps;
-	float mtpr;
-	float mtprc;
-	float transfer_rate;		
-	int min_connect;
-	float mean_connect;
-	float sd_connect;
-	int median_connect;
-	int max_connect;
-	Integer[] fractions;
-	Integer[] latencies;
+	int set_completed;
+	String set_percentiles;
+	String set_latencies;
+	int get_completed;
+	String get_percentiles;
+	String get_latencies;
 }
