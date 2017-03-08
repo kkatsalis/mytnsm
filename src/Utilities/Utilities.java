@@ -85,7 +85,7 @@ public class Utilities {
 
 	public static void updateRequestStats2Db(int slot, Configuration config,int[][][] vmRequestMatrix,int[][][] total_requests) {	
 
-		String sql = "INSERT INTO RUNNING_REQUESTS(slot, provider_id,vm_type_id,service_id,vms_requested,total_requests) VALUES(?,?,?,?,?,?)";
+		String sql = "INSERT INTO RUNNING_SERVICE_REQUESTS(slot, provider_id,vm_type_id,service_id,vms_requested,total_requests) VALUES(?,?,?,?,?,?)";
 		int providers_number = config.getProviders_number();
 		int vm_types_number = config.getVm_types_number();
 		int services_number = config.getServices_number();

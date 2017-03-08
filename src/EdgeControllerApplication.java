@@ -22,26 +22,25 @@ public class EdgeControllerApplication {
 		int runID;
 		String algorithm;
 
+		simulator=new Simulator();
+
 		if(args.length>0){
 
 			algorithm=args[0].toString();
 			simulationID=Integer.valueOf(args[1].toString());
 			runID=Integer.valueOf(args[2].toString());
+		
+			simulator.get_config().setSimulationID(simulationID);
+			simulator.get_config().setAlgorithm(algorithm);
+			simulator.get_config().setRunID(runID);
+		}			
+		
+		simulator.StartExperiment();
+	
+		if(simulator.get_config().getSimulation_mode())
+			simulator.get_clients_simulator().startClientsRequests();
 
-			simulationID=1;
-			runID=1;
-
-			simulator=new Simulator(algorithm,simulationID,runID);
-			simulator.StartExperiment();
-
-		}else{
-			simulationID=1;
-			runID=1;
-			algorithm= EAlgorithms.Lyapunov.toString();   
-			simulator=new Simulator(algorithm,simulationID,runID);
-			simulator.StartExperiment();
-		}
-
+		
 	}
 
 

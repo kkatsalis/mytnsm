@@ -11,33 +11,39 @@ package Statistics;
  */
 public class WebRequestStatsSlot {
  
-    int slot;
-    double average_response_time; // responseTime[p][s] p:provider, s:service
-    int numberOfRequests; // numberOfRequests[p][s] p:provider, s:service
-   
-    public int getSlot() {
-        return slot;
-    }
+	  int slot;
+	    
+	    double responseTime[][]; // responseTime[p][s] p:provider, s:service
+	    int numberOfRequests[][]; // numberOfRequests[p][s] p:provider, s:service
+	   
+	    
+	    public WebRequestStatsSlot(int slot,int pi, int si) {
+	        
+	        this.slot = slot;
+	        
+	        responseTime=new double[pi][si];
+	        numberOfRequests=new int[pi][si];
+	        
+	        for (int p = 0; p < pi; p++) {
+	            for (int s= 0; s < si; s++) {
+	                responseTime[p][s]=0;
+	                numberOfRequests[p][s]=0;
+	            }
+	        }
+	    }
 
-	public double getAverage_response_time() {
-		return average_response_time;
-	}
+	    public int getSlot() {
+	        return slot;
+	    }
 
-	public void setAverage_response_time(double average_response_time) {
-		this.average_response_time = average_response_time;
-	}
+	    public double[][] getResponseTime() {
+	        return responseTime;
+	    }
 
-	public int getNumberOfRequests() {
-		return numberOfRequests;
-	}
-
-	public void setNumberOfRequests(int numberOfRequests) {
-		this.numberOfRequests = numberOfRequests;
-	}
-
-	public void setSlot(int slot) {
-		this.slot = slot;
-	}
+	    public int[][] getNumberOfRequests() {
+	        return numberOfRequests;
+	    }
+	    
 
     
     

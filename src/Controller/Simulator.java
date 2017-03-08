@@ -28,6 +28,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.JSONException;
 
+import Clients.ClientsSimulator;
 import Controller.*;
 import Utilities.*;
 
@@ -61,7 +62,9 @@ public class Simulator {
 
 	List<String> _remote_machine_ips;
 
-	public Simulator(String algorithm, int simulatorID, int runID) {
+	ClientsSimulator _clients_simulator;
+	
+	public Simulator() {
 
 		this._config = new Configuration();
 		this.hosts_number=_config.getHosts_number();
@@ -75,11 +78,8 @@ public class Simulator {
 		System.out.println("********** System Initialization Phase ****************");
 
 		initializeSimulationObjects(); // creates: Hosts, Clients, Slots
-
-		this._controller = new Controller(_config, _hosts, _slots, _providers);
-
 		addServiceRequestEvents();
-
+		
 		System.out.println("********** End of System Initialization Phase **************");
 		System.out.println();
 
@@ -97,20 +97,6 @@ public class Simulator {
 
 		}
 		System.out.println("Initialization: Slots Objects Ready");
-
-		// for (int i = 0; i < _slots.length; i++) {
-		// System.out.println("---------------- SLOT " + i + "
-		// -----------------------------");
-		// for (int p = 0; p < _config.providers_number; p++) {
-		// for (ServiceRequest e : _slots[i].getServiceRequests2Activate()[p]) {
-		// System.out.println("Create: " + e.getRequestId());
-		// }
-		// for (ServiceRequest e : _slots[i].getServiceRequests2Remove()[p]) {
-		// System.out.println("Delete: " + e.getRequestId());
-		// }
-		// System.out.println("");
-		// }
-		// }
 
 		// ---------- Initialize providers
 		_providers = new Provider[providers_number];
@@ -134,6 +120,15 @@ public class Simulator {
 			ip = (String) _config.getRemote_machine_config()[i].get("ip");
 			_remote_machine_ips.add(ip);
 		}
+		
+		// ---------- Controller
+		this._controller = new Controller(_config, _hosts, _slots, _providers);
+		System.out.println("Initialization: Controller Object Ready");
+
+		// ---------- web Clients
+		this._clients_simulator=new ClientsSimulator(_config, _controller);
+		System.out.println("Initialization: Web Clients Object Ready");
+
 
 	}
 
@@ -347,4 +342,15 @@ public class Simulator {
 		}
 	}
 
+	public ClientsSimulator get_clients_simulator() {
+		return _clients_simulator;
+	}
+
+	public Configuration get_config() {
+		return _config;
+	}
+
+	
+	
+	
 }

@@ -31,6 +31,7 @@ public class Configuration {
 	int slots;
 	int slotDuration;
 	String slotDurationMetric;
+	Boolean simulation_mode;
 
 	// ======= Statistics ==========
 
@@ -146,7 +147,7 @@ public class Configuration {
 
 					parameter = "provider" + p + "_service" + s + "_arrivals_shape";
 					double_value = Double.valueOf( property.getProperty(parameter));
-					arrivals_generator[p][s].put("arrivals_location", double_value);
+					arrivals_generator[p][s].put("arrivals_shape", double_value);
 
 
 				} else if (EGeneratorType.Random.toString().equals(arrival_rate_type)) {
@@ -316,7 +317,7 @@ public class Configuration {
 		simulationID = Integer.valueOf(property.getProperty("simulationID"));
 		runID = Integer.valueOf(property.getProperty("runID"));
 		algorithm = String.valueOf(property.getProperty("algorithm"));
-
+		simulation_mode= Boolean.valueOf(property.getProperty("simulation_mode"));
 		slots = Integer.valueOf(property.getProperty("slots"));
 		slotDuration = Integer.valueOf(property.getProperty("slotDuration"));
 		slotDurationMetric = String.valueOf(property.getProperty("slotDurationMetric"));
@@ -561,6 +562,23 @@ public class Configuration {
 	public String[] getService_charm() {
 		return service_charm;
 	}
+
+	public Boolean getSimulation_mode() {
+		return simulation_mode;
+	}
+
+	public void setSimulationID(int simulationID) {
+		this.simulationID = simulationID;
+	}
+
+	public void setRunID(int runID) {
+		this.runID = runID;
+	}
+
+	public void setAlgorithm(String algorithm) {
+		this.algorithm = algorithm;
+	}
+
 
 
 

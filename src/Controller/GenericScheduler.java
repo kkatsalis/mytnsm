@@ -19,20 +19,20 @@ public class GenericScheduler {
 	int services_number;
 	int resources_number;
 	int[][] reserved_resources; //[n][R]
-	int[][][][] running_allocations; //[n][v][s]
+	Controller controller;
 	
 	
-	public GenericScheduler(Configuration confg) {
+	public GenericScheduler(Configuration confg, Controller controller) {
 		super();
 		this.config = confg;
-
+		this.controller=controller;
 		hosts_number=confg.getHosts_number();
 		providers_number=confg.getProviders_number();
 		vm_types_number=confg.getVm_types_number();
 		services_number=confg.getServices_number();
 		resources_number=config.getResources_number();
 
-		running_allocations=new int [hosts_number][providers_number][vm_types_number][services_number];
+	
 	}
 
 	//	 vmRequestMatrix[p][v][s] 
@@ -58,7 +58,7 @@ public class GenericScheduler {
 
 							if (checkIfFits) {
 								activationMatrix[n][p][v][s]++;
-								running_allocations[n][p][v][s]++;
+								controller.getRunning_allocations()[n][p][v][s]++;
 							
 								break;
 							}
@@ -99,7 +99,7 @@ public class GenericScheduler {
 		int vms_number=0;
 		for (int p = 0; p < providers_number; p++) {
 			for (int s = 0; s < services_number; s++) {
-				vms_number=running_allocations[n][p][v][s];
+				vms_number=controller.getRunning_allocations()[n][p][v][s];
 				for (int r = 0; r < resources_number; r++) {
 					reserved_resources[n][r]+=vms_number*Utilities.getVmResourceCost(config, v, r);
 				}
@@ -120,10 +120,7 @@ public class GenericScheduler {
 
 	}
 
-	public int[][][][] getRunning_allocations() {
-		return running_allocations;
-	}
-
+	
 
 
 
