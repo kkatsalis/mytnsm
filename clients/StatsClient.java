@@ -148,6 +148,8 @@ public class StatsClient {
 	public static void main(String[] args) {
 		StatsClient client = new StatsClient();
 		client.connectDB();
+		System.out.println("AB Requests "+client.getRequests(0, 0,1488984281769l, 1488984281769l));
+		System.out.println("Redis Requests "+client.getRequests(1, 0,1488984284308l, 1488984284469l));
 		System.out.println("AB Response Time "+client.getResponseTime(0, 0,1488984281751l, 1488984281769l));
 		System.out.println("Redis Response Time "+client.getResponseTime(1, 0,1488984284308l, 1488984284469l));
 	}
