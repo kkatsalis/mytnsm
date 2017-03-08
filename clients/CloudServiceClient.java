@@ -18,6 +18,9 @@ import java.sql.SQLException;
 
 public class CloudServiceClient {
 	public static void main(String[] args){
+////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// AB ////////////////////////////////////////////////////////
+		
 		String abTable = "CREATE TABLE ABSTATS " +
                 "(ts TIMESTAMP not NULL, " +
                 " CLIENT_ID VARCHAR(50) not NULL, " + 
@@ -43,15 +46,38 @@ public class CloudServiceClient {
 		
 		
 		float request_rate = 300; // Poisson mean request rate in requests per second
-		
 		int concurrent = 300;
 		
-		RedisServiceClient red = new RedisServiceClient("vodafone", "1", request_rate, concurrent, concurrent, "http://10.95.196.78:80/");
-		red.createTable(abTable);
+		ABServiceClient ab = new ABServiceClient("vodafone", "1", request_rate, concurrent, concurrent, "http://10.95.196.78:80/");
+		ab.createTable(abTable);
 
+		new ClientThread(request_rate, concurrent, 20000, ab).start();
+		
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		///////////////////////////// REDIS ////////////////////////////////////////////////////////
+		
+		String redTable = "CREATE TABLE REDISSTATS " +
+                "(ts TIMESTAMP not NULL, " +
+                " CLIENT_ID VARCHAR(50) not NULL, " + 
+                " PROVIDER VARCHAR(50) not NULL, " + 
+                " requests INTEGER not NULL, "+
+            	" concurrency INTEGER not NULL, "+ 
+                " request_rate FLOAT not NULL, "+
+                " set_completed INTEGER not NULL, " +
+            	" set_percentiles VARCHAR(120) not NULL, "+
+            	" set_latencies VARCHAR(120) not NULL, "+
+            	" get_completed INTEGER not NULL, " +
+             	" get_percentiles VARCHAR(120) not NULL, "+
+             	" get_latencies VARCHAR(120) not NULL, "+
+                " PRIMARY KEY ( TS,PROVIDER,CLIENT_ID ))"; 
+	
+		request_rate = 300; // Poisson mean request rate in requests per second
+		concurrent = 300;
+		
+		RedisServiceClient red = new RedisServiceClient("vodafone", "1", request_rate, concurrent, concurrent, "10.95.196.143");
+		red.createTable(redTable);
 		new ClientThread(request_rate, concurrent, 20000, red).start();
-		//redisBenchmark("10.95.196.143");
-
 	}
 }
 
