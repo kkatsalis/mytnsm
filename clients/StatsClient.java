@@ -8,12 +8,6 @@ import java.sql.ResultSet;
 
 public class StatsClient {
 	Connection conn = null;
-	String provider;
-	String client_id;
-	float request_rate;
-	int requests;
-	int concurrency;
-	String url;
 
 	void connectDB() {
 		try {
@@ -23,6 +17,16 @@ public class StatsClient {
 			this.conn = DriverManager.getConnection(url);
 
 			System.out.println("Connection to SQLite has been established.");
+
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		} 
+	}
+	
+	void disConnectDB() {
+		try {
+			if (conn != null)
+				conn.close();
 
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
@@ -45,14 +49,13 @@ public class StatsClient {
 	{
 		String table = null;
 		long reqs = 0;
-		String providerId = "vodafone";
 
 		if (serviceId == 0)
 			table = "ABSTATS";
 		else if (serviceId == 1)
 			table = "REDISSTATS";
 
-		String qr = "SELECT REQUESTS FROM "+table+" WHERE PROVIDER='"+providerId+"' AND TS>="+start+" AND TS<="+end;
+		String qr = "SELECT REQUESTS FROM "+table+" WHERE PROVIDER="+provId+" AND TS>="+start+" AND TS<="+end;
 		ResultSet rs = executeQR(qr);
 		try {
 			while (rs.next()) 
@@ -87,14 +90,13 @@ public class StatsClient {
 	{
 		float latency = 0;
 		int rows = 0;
-		String providerId = "vodafone";
 		
 		
 		if (serviceId == 0)
 		{
-			String qr = "SELECT LATENCIES FROM ABSTATS WHERE PROVIDER='"+
-					providerId+
-					"' AND TS>="+start+
+			String qr = "SELECT LATENCIES FROM ABSTATS WHERE PROVIDER="+
+					provId+
+					" AND TS>="+start+
 					" AND TS<="+end;
 			ResultSet rs = executeQR(qr);
 			try {				
@@ -117,9 +119,9 @@ public class StatsClient {
 		}
 		else if (serviceId == 1)
 		{
-			String qr = "SELECT GET_PERCENTILES,GET_LATENCIES FROM REDISSTATS WHERE PROVIDER='"+
-					providerId+
-					"' AND TS>="+start+
+			String qr = "SELECT GET_PERCENTILES,GET_LATENCIES FROM REDISSTATS WHERE PROVIDER="+
+					provId+
+					" AND TS>="+start+
 					" AND TS<="+end;
 			ResultSet rs = executeQR(qr);
 			try {
@@ -148,9 +150,9 @@ public class StatsClient {
 	public static void main(String[] args) {
 		StatsClient client = new StatsClient();
 		client.connectDB();
-		System.out.println("AB Requests "+client.getRequests(0, 0,1488984281769l, 1488984281769l));
-		System.out.println("Redis Requests "+client.getRequests(1, 0,1488984284308l, 1488984284469l));
-		System.out.println("AB Response Time "+client.getResponseTime(0, 0,1488984281751l, 1488984281769l));
-		System.out.println("Redis Response Time "+client.getResponseTime(1, 0,1488984284308l, 1488984284469l));
+		System.out.println("AB Requests "+client.getRequests(0, 1,1489043591966l, 1489043600078l));
+		System.out.println("AB Response Time "+client.getResponseTime(0, 1,1489043606742l, 1489043606896l));
+		System.out.println("Redis Response Time "+client.getResponseTime(1, 1,1489043662258l, 1489043662288l));
+		client.disConnectDB();
 	}
 }

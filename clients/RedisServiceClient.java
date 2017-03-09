@@ -18,7 +18,7 @@ import java.sql.SQLException;
 public class RedisServiceClient implements Runnable {
 
 	Connection conn = null;
-	String provider;
+	int provider;
 	String client_id;
 	float request_rate;
 	int requests;
@@ -78,7 +78,7 @@ public class RedisServiceClient implements Runnable {
 			
 			pstmt.setTimestamp(1, data.ts);
 			pstmt.setString(2, data.client_id);
-			pstmt.setString(3, data.provider);
+			pstmt.setInt(3, data.provider);
 			pstmt.setInt(4, data.requests);
 			pstmt.setInt(5, data.concurrency);
 			pstmt.setFloat(6, data.request_rate);
@@ -187,7 +187,7 @@ public class RedisServiceClient implements Runnable {
  		return data;
 	}
 
-	public RedisServiceClient(String provider, String client_id, float request_rate, int requests, int concurrency, String ip)
+	public RedisServiceClient(int provider, String client_id, float request_rate, int requests, int concurrency, String ip)
 	{
 		this.provider = provider;
 		this.client_id = client_id;
@@ -232,7 +232,7 @@ public class RedisServiceClient implements Runnable {
 		String redTable = "CREATE TABLE REDISSTATS " +
                 "(ts TIMESTAMP not NULL, " +
                 " CLIENT_ID VARCHAR(50) not NULL, " + 
-                " PROVIDER VARCHAR(50) not NULL, " + 
+                " PROVIDER INTEGER not NULL, " + 
                 " requests INTEGER not NULL, "+
             	" concurrency INTEGER not NULL, "+ 
                 " request_rate FLOAT not NULL, "+
@@ -248,7 +248,7 @@ public class RedisServiceClient implements Runnable {
 		
 		int concurrent = 300;
 		
-		RedisServiceClient red = new RedisServiceClient("vodafone", "1", request_rate, concurrent, concurrent, "10.95.196.143");
+		RedisServiceClient red = new RedisServiceClient(1, "1", request_rate, concurrent, concurrent, "10.95.196.143");
 		red.createTable(redTable);
 		new Thread(red).start();
 
@@ -258,7 +258,7 @@ public class RedisServiceClient implements Runnable {
 class RedisData {
 	Timestamp ts;
 	String client_id;
-	String provider;
+	int provider;
 	int requests;
 	int concurrency;
 	float request_rate;

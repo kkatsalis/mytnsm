@@ -24,7 +24,7 @@ public class CloudServiceClient {
 		String abTable = "CREATE TABLE ABSTATS " +
                 "(ts TIMESTAMP not NULL, " +
                 " CLIENT_ID VARCHAR(50) not NULL, " + 
-                " PROVIDER VARCHAR(50) not NULL, " + 
+                " PROVIDER INTEGER not NULL, " + 
                 " requests INTEGER not NULL, "+
             	" concurrency INTEGER not NULL, "+ 
                 " request_rate FLOAT not NULL, "+
@@ -48,7 +48,7 @@ public class CloudServiceClient {
 		float request_rate = 300; // Poisson mean request rate in requests per second
 		int concurrent = 300;
 		
-		ABServiceClient ab = new ABServiceClient("vodafone", "1", request_rate, concurrent, concurrent, "http://10.95.196.78:80/");
+		ABServiceClient ab = new ABServiceClient(1, "1", request_rate, concurrent, concurrent, "http://10.95.196.78:80/");
 		ab.createTable(abTable);
 
 		new ClientThread(request_rate, concurrent, 20000, ab).start();
@@ -60,7 +60,7 @@ public class CloudServiceClient {
 		String redTable = "CREATE TABLE REDISSTATS " +
                 "(ts TIMESTAMP not NULL, " +
                 " CLIENT_ID VARCHAR(50) not NULL, " + 
-                " PROVIDER VARCHAR(50) not NULL, " + 
+                " PROVIDER INTEGER not NULL, " + 
                 " requests INTEGER not NULL, "+
             	" concurrency INTEGER not NULL, "+ 
                 " request_rate FLOAT not NULL, "+
@@ -75,7 +75,7 @@ public class CloudServiceClient {
 		request_rate = 300; // Poisson mean request rate in requests per second
 		concurrent = 300;
 		
-		RedisServiceClient red = new RedisServiceClient("vodafone", "1", request_rate, concurrent, concurrent, "10.95.196.143");
+		RedisServiceClient red = new RedisServiceClient(1, "1", request_rate, concurrent, concurrent, "10.95.196.143");
 		red.createTable(redTable);
 		new ClientThread(request_rate, concurrent, 20000, red).start();
 	}

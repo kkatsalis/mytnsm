@@ -19,7 +19,7 @@ import java.sql.SQLException;
 public class ABServiceClient implements Runnable {
 
 	Connection conn = null;
-	String provider;
+	int provider;
 	String client_id;
 	float request_rate;
 	int requests;
@@ -86,7 +86,7 @@ public class ABServiceClient implements Runnable {
 			
 			pstmt.setTimestamp(1, data.ts);
 			pstmt.setString(2, data.client_id);
-			pstmt.setString(3, data.provider);
+			pstmt.setInt(3, data.provider);
 			pstmt.setInt(4, data.requests);
 			pstmt.setInt(5, data.concurrency);
 			pstmt.setFloat(6, data.request_rate);
@@ -206,7 +206,7 @@ public class ABServiceClient implements Runnable {
  		return data;
 	}
 
-	public ABServiceClient(String provider, String client_id, float request_rate, int requests, int concurrency, String url)
+	public ABServiceClient(int provider, String client_id, float request_rate, int requests, int concurrency, String url)
 	{
 		this.provider = provider;
 		this.client_id = client_id;
@@ -249,7 +249,7 @@ public class ABServiceClient implements Runnable {
 		String abTable = "CREATE TABLE ABSTATS " +
                 "(ts TIMESTAMP not NULL, " +
                 " CLIENT_ID VARCHAR(50) not NULL, " + 
-                " PROVIDER VARCHAR(50) not NULL, " + 
+                " PROVIDER INTEGER not NULL, " + 
                 " requests INTEGER not NULL, "+
             	" concurrency INTEGER not NULL, "+ 
                 " request_rate FLOAT not NULL, "+
@@ -274,10 +274,10 @@ public class ABServiceClient implements Runnable {
 		
 		int concurrent = 300;
 		
-		ABServiceClient ab = new ABServiceClient("vodafone", "1", request_rate, concurrent, concurrent, "http://10.95.196.78:80/");
+		ABServiceClient ab = new ABServiceClient(1, "1", request_rate, concurrent, concurrent, "http://10.95.196.78:80/");
 		ab.createTable(abTable);
 
-		new ClientThread(request_rate, concurrent, 20000, ab).start();
+		new Thread(ab).start();
 	}
 }
 
@@ -285,7 +285,7 @@ public class ABServiceClient implements Runnable {
 class ABdata {
 	Timestamp ts;
 	String client_id;
-	String provider;
+	int provider;
 	int requests;
 	int concurrency;
 	float request_rate;
