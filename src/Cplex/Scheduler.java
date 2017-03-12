@@ -242,6 +242,7 @@ public class Scheduler {
                 ios.write("\n");
                 ios.flush();
 
+                updateData(data, activationMatrix);
                 System.out.println();
 
                 for (int i = 0; i < data.N; i++) {
@@ -261,7 +262,7 @@ public class Scheduler {
                 System.out.println("Solution NOT FOUND");
                 System.out.println("Solution status = " + cplex.getStatus());
             }
-            //  updateData(data, activationMatrix);
+            
             cplex.end();
 
         } catch (IloException ex) {

@@ -138,7 +138,7 @@ public class Simulator {
 
 		for (int p = 0; p < providers_number; p++) {
 			for (int s = 0; s < services_number; s++) {
-				new_running_slot[p][s]=CreateInitialServiceRequest(p,s);
+				new_running_slot[p][s]=createInitialNfvRequest(p,s);
 			}
 		}
 		
@@ -146,7 +146,7 @@ public class Simulator {
 			for (int s = 0; s < services_number; s++) {
 				
 				while (new_running_slot[p][s] < _config.getSlotsNumber()) {
-					new_running_slot[p][s] = CreateNewServiceRequest(p, s, new_running_slot[p][s]);
+					new_running_slot[p][s] = createNewNfvRequest(p, s, new_running_slot[p][s]);
 				}
 
 
@@ -155,7 +155,7 @@ public class Simulator {
 	}
 
 	// Returns the new running slot (this can be also 0)
-	private int CreateInitialServiceRequest(int providerID, int serviceID) {
+	private int createInitialNfvRequest(int providerID, int serviceID) {
 
 		int lifetime = calculateServiceLifeTime(providerID, serviceID);
 
@@ -176,7 +176,7 @@ public class Simulator {
 
 	}
 
-	private int CreateNewServiceRequest(int providerID, int serviceID, int currentSlot) {
+	private int createNewNfvRequest(int providerID, int serviceID, int currentSlot) {
 
 		int slot2RemoveService = 0;
 

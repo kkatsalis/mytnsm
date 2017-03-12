@@ -169,22 +169,26 @@ class ExecuteClientRequest extends TimerTask {
 	}
 
 	
-	public void sendClientStatsToDB(int slot, int provider_id, int service_id, int client_id, int request,
+	public void sendClientStatsToDB(int slot, int provider_id, int service_id, int client_id, int request_index,
 			double response_time) {
 
-		String sql = "INSERT INTO STATS_CLIENTS(slot,provider_id,service_id,client_id,request,response_time) VALUES(?,?,?,?,?,?)";
+		String sql = "INSERT INTO CLIENTS(sim_id,run_id,slot,provider_id,service_id,client_id,request_index,response_time) VALUES(?,?,?,?,?,?,?,?)";
+		int sim_id=config.getSimulationID();
+		int run_id=config.getRunID();
 
 		try {
 			Connection conn =controller.getConn(); 
 
 			PreparedStatement pstmt = conn.prepareStatement(sql);
-
-			pstmt.setInt(1, slot);
-			pstmt.setInt(2, provider_id);
-			pstmt.setInt(3, service_id);
-			pstmt.setInt(4, client_id);
-			pstmt.setInt(5, request);
-			pstmt.setDouble(6, response_time);
+			
+			pstmt.setInt(1, sim_id);
+			pstmt.setInt(2, run_id);
+			pstmt.setInt(3, slot);
+			pstmt.setInt(4, provider_id);
+			pstmt.setInt(5, service_id);
+			pstmt.setInt(6, client_id);
+			pstmt.setInt(7, request_index);
+			pstmt.setDouble(8, response_time);
 
 			pstmt.executeUpdate();
 		} catch (SQLException e) {

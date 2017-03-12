@@ -33,7 +33,7 @@ import java.util.logging.Logger;
  */
 public class Controller {
 
-	boolean SIMULATION_MODE = true;
+	boolean SIMULATION_MODE;
 	Configuration _config;
 	Slot[] _slots;
 	Host[] _hosts;
@@ -61,7 +61,8 @@ public class Controller {
 
 	Timer stats_timer;
 
-	int[][][] total_requests;
+	int[][][] total_vms_requests;
+	int[][][] total_vms_satisfied;
 	int slot = 0;
 	Connection conn;
 	Controller(Configuration config, Host[] hosts, Slot[] slots, Provider[] _provider) {
@@ -88,8 +89,7 @@ public class Controller {
 
 	private void initializeController() {
 
-		this._webRequestSlotStats = new WebRequestStatsSlot[_config
-				.getSlotsNumber()][providers_number][services_number];
+		this._webRequestSlotStats = new WebRequestStatsSlot[_config.getSlotsNumber()][providers_number][services_number];
 		this._webRequestPattern = new int[providers_number][services_number];
 
 		for (int slot = 0; slot < slots_number; slot++) {
@@ -105,11 +105,14 @@ public class Controller {
 				_webRequestPattern[p][s] = (int) _config.getArrivals_generator()[p][s].get("estimated_requests");
 			}
 		}
-		total_requests = new int[providers_number][vm_types_number][services_number];
+		total_vms_requests = new int[providers_number][vm_types_number][services_number];
+		total_vms_satisfied= new int[providers_number][vm_types_number][services_number];
+		
 		for (int p = 0; p < this.providers_number; p++) {
 			for (int v = 0; v < this.vm_types_number; v++) {
 				for (int s = 0; s < this.services_number; s++) {
-					total_requests[p][v][s] = 0;
+					total_vms_requests[p][v][s] = 0;
+					total_vms_satisfied[p][v][s] = 0;
 				}
 			}
 		}
@@ -136,7 +139,7 @@ public class Controller {
 				}
 			}
 			int[][][] vmRequestMatrix = loadVMRequestMatrix(slot);
-			Utilities.updateRequestStats2Db(conn,slot, _config, vmRequestMatrix, total_requests);
+			Utilities.updateVmRequestStats2Db(conn,slot, _config, vmRequestMatrix, total_vms_requests);
 
 			System.out.println("REQUESTS Matrix:" + Arrays.deepToString(vmRequestMatrix));
 
@@ -144,7 +147,8 @@ public class Controller {
 			int[][][][] vms2DeleteMatrix = prepareVmDeleteMatrix(slot);
 			System.out.println("DELETE Matrix:" + Arrays.deepToString(vms2DeleteMatrix));
 			reduceRunningAllocation(vms2DeleteMatrix);
-			if (!SIMULATION_MODE) {
+
+			if (SIMULATION_MODE==false) {
 				destroyServices(slot);
 				Thread.sleep(10000);
 			}
@@ -168,7 +172,7 @@ public class Controller {
 				else
 					System.out.print("No scheduling algorithm is defined");
 
-				
+
 
 			}
 
@@ -181,9 +185,20 @@ public class Controller {
 			double net_benefit = cplexResponse.getNetBenefit();
 			System.out.println("NET_BENEFIT: " + net_benefit);
 
-			Utilities.updateActivationStats(conn,slot, _config, activationMatrix,net_benefit);
+			for (int n = 0; n < hosts_number ; n++) {
+				for (int p = 0; p < this.providers_number; p++) {
+					for (int v = 0; v < this.vm_types_number; v++) {
+						for (int s = 0; s < this.services_number; s++) {
+							total_vms_satisfied[p][v][s]+=activationMatrix[n][p][v][s];
+						}
+					}
+				}
+			}
+
+
+			Utilities.updateActivationStats(conn,slot, _config, activationMatrix,total_vms_satisfied,net_benefit);
 			// ----------- Create VMs Actual)
-			if (!SIMULATION_MODE) 
+			if (SIMULATION_MODE==false) 
 				createAllServices(slot, activationMatrix);
 
 		} catch (Exception ex) {
@@ -323,25 +338,25 @@ public class Controller {
 		Thread thread;
 		int vms_number = 0;
 
-			try {
-				load_service_object = new LoadService(_config, slot, activation_matrix);
-				thread = new Thread(load_service_object);
-				thread.start();
-				Thread.sleep(0);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+		try {
+			load_service_object = new LoadService(_config, slot, activation_matrix);
+			thread = new Thread(load_service_object);
+			thread.start();
+			Thread.sleep(0);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	@SuppressWarnings("unused")
 	private void destroyServices(int slot) throws InterruptedException {
-		
-			DestroyService deleter = new DestroyService(_slots[slot]);
-			Thread thread = new Thread(deleter);
-			thread.start();
-			Thread.sleep(5);
-		
+
+		DestroyService deleter = new DestroyService(_slots[slot]);
+		Thread thread = new Thread(deleter);
+		thread.start();
+		Thread.sleep(5);
+
 	}
 
 	private CplexResponse updatePenaltyAndUtility(SchedulerData data, int[][][][] activationMatrix) {
@@ -394,7 +409,7 @@ public class Controller {
 				for (int v = 0; v < vm_types_number; v++) {
 					vm_requests = nextRequest.getVms_requested()[v];
 					vmRequestMatrix[p][v][s] = vm_requests;
-					total_requests[p][v][s] += vm_requests;
+					total_vms_requests[p][v][s] += vm_requests;
 				}
 			}
 		}
@@ -594,6 +609,6 @@ public class Controller {
 
 
 
-	
-	
+
+
 }
