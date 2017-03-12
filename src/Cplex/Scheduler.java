@@ -242,7 +242,7 @@ public class Scheduler {
                 ios.write("\n");
                 ios.flush();
 
-                updateData(data, activationMatrix);
+               // updateData(data, activationMatrix);
                 System.out.println();
 
                 for (int i = 0; i < data.N; i++) {
@@ -324,28 +324,6 @@ public class Scheduler {
         
     }
 
-    private int[][] updateReservedResources(SchedulerData data, int[][][][] activationMatrix) {
-
-        int[][] hostReservedResources = new int[data.N][data.R];
-
-        for (int n = 0; n < data.N; n++) {
-            for (int r = 0; r < data.R; r++) {
-
-                hostReservedResources[n][r] = 0;
-
-                for (int v = 0; v < data.V; v++) {
-                    for (int p = 0; p < data.P; p++) {
-                        for (int s = 0; s < data.S; s++) {
-
-                            hostReservedResources[n][r] += data.m[v][r] * (data.n[n][p][v][s] + activationMatrix[n][p][v][s]);
-                        }
-                    }
-
-                }
-            }
-        }
-        return hostReservedResources;
-    }
 
     private boolean checkIftheVMFits(SchedulerData data, int[][] reservedResources, int v, int n) {
 

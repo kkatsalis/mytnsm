@@ -163,12 +163,15 @@ public class Utilities {
 				host_max_capacity[r]=Integer.valueOf((String) host_config.get("cpu_cores"));
 				break;
 			case 1:
-				host_max_capacity[r]=Integer.valueOf((String) host_config.get("memory"));
+				host_max_capacity[r]=Integer.valueOf((String) host_config.get("cpu_power"));
 				break;
 			case 2:
-				host_max_capacity[r]=Integer.valueOf((String) host_config.get("storage"));
+				host_max_capacity[r]=Integer.valueOf((String) host_config.get("memory"));
 				break;
 			case 3:
+				host_max_capacity[r]=Integer.valueOf((String) host_config.get("storage"));
+				break;
+			case 4:
 				host_max_capacity[r]=Integer.valueOf((String) host_config.get("bandwidth"));
 				break;
 
@@ -189,12 +192,15 @@ public class Utilities {
 			resource_cost=config.getVm_cpu_cores()[vm_type];
 			break;
 		case 1:
-			resource_cost=config.getVm_memory()[vm_type];
+			resource_cost=config.getVm_cpu_power()[vm_type];
 			break;
 		case 2:
-			resource_cost=config.getVm_storage()[vm_type];
+			resource_cost=config.getVm_memory()[vm_type];
 			break;
 		case 3:
+			resource_cost=config.getVm_storage()[vm_type];
+			break;
+		case 4:
 			resource_cost=config.getVm_bandwidth()[vm_type];
 			break;
 

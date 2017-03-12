@@ -107,7 +107,7 @@ public class Controller {
 		}
 		total_vms_requests = new int[providers_number][vm_types_number][services_number];
 		total_vms_satisfied= new int[providers_number][vm_types_number][services_number];
-		
+
 		for (int p = 0; p < this.providers_number; p++) {
 			for (int v = 0; v < this.vm_types_number; v++) {
 				for (int s = 0; s < this.services_number; s++) {
@@ -132,6 +132,15 @@ public class Controller {
 
 		try {
 
+			// Load VM Deactivation Matrix
+			int[][][][] vms2DeleteMatrix = prepareVmDeleteMatrix(slot);
+			System.out.println("DELETE Matrix:" + Arrays.deepToString(vms2DeleteMatrix));
+			reduceRunningAllocation(vms2DeleteMatrix);
+			if (SIMULATION_MODE==false) {
+				destroyServices(slot);
+				Thread.sleep(10000);
+			}	
+
 			// ----------- Load VM Request Lists
 			for (int p = 0; p < this.providers_number; p++) {
 				for (ServiceRequest serviceRequest : _slots[slot].getServiceRequests2Activate()[p]) {
@@ -143,15 +152,6 @@ public class Controller {
 
 			System.out.println("REQUESTS Matrix:" + Arrays.deepToString(vmRequestMatrix));
 
-			// Load VM Deactivation Matrix
-			int[][][][] vms2DeleteMatrix = prepareVmDeleteMatrix(slot);
-			System.out.println("DELETE Matrix:" + Arrays.deepToString(vms2DeleteMatrix));
-			reduceRunningAllocation(vms2DeleteMatrix);
-
-			if (SIMULATION_MODE==false) {
-				destroyServices(slot);
-				Thread.sleep(10000);
-			}
 
 			// Update WebRequest Pattern
 			// int[][] requestPattern=Utilities.findRequestPattern(_config);
@@ -172,9 +172,20 @@ public class Controller {
 				else
 					System.out.print("No scheduling algorithm is defined");
 
-
-
 			}
+			// In FF running allocations are updated internally
+			if ((_config.getAlgorithm()).equals(EAlgorithms.Lyapunov.toString()))
+			for (int n = 0; n < hosts_number; n++) {
+				for (int p = 0; p < providers_number; p++) {
+					for (int v = 0; v < vm_types_number; v++) {
+						for (int s = 0; s < services_number; s++) {
+							running_allocations[n][p][v][s]+=activationMatrix[n][p][v][s];
+						}
+					}
+				}
+			}
+
+
 
 			System.out.println("ACTIVATION Matrix:" + Arrays.deepToString(activationMatrix));
 
@@ -324,7 +335,13 @@ public class Controller {
 		int providerID = _serviceRequest.getProviderID();
 
 		// Solves the VM mapping problem
-		int[] _vms = _cplexData.f(providerID, serviceID);
+		int[] _vms = null;
+		if ((_config.getAlgorithm()).equals(EAlgorithms.FirstFit.toString()))
+			_vms = _cplexData.fk(providerID, serviceID);
+		else if ((_config.getAlgorithm()).equals(EAlgorithms.Lyapunov.toString()))
+			_vms=_cplexData.f(_cplexData,providerID, serviceID);
+
+
 
 		for (int v = 0; v < _vms.length; v++) {
 			_serviceRequest.getVms_requested()[v] = _vms[v];

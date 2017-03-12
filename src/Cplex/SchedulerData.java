@@ -197,7 +197,66 @@ public class SchedulerData {
         }
     }
     
-    public int[] f(int j,int s )
+    public int[] f(SchedulerData data,int j,int s )
+    {
+        try {
+            
+            int W = -data.r[j][s];
+            
+            
+            double v[] = new double[this.V];
+            double w[] = new double[this.V];
+            double weights[] = new double[this.V];
+            int[] indexes = new int[this.V];
+            int[] toReturn = new int[this.V];
+            
+            for (int i=0;i<data.w.length;i++)
+            {
+                v[i] = -data.w[i];
+                w[i] = -ksi(s, j, i);
+                weights[i] = v[i]/w[i];
+                indexes[i] = i;
+            }
+            
+            myBubbleSort(weights, indexes);
+            
+            
+//		for (int i = 0; i < weights.length; i++) {
+//			System.out.println("Weight: "+weights[i]+" for VM: "+indexes[i]);
+//		}
+            
+            double sum = 0;
+            int i = 0;
+            for (; i < weights.length; i++) {
+                while (true)
+                {
+                    if (sum+w[indexes[i]] >= W)
+                    {
+                        sum += w[indexes[i]];
+                        toReturn[indexes[i]]++;
+                    } else
+                    {
+                        break;
+                    }
+//				System.out.println("Sum: "+sum+" Currently increased index: "+indexes[i]);
+                }
+            }
+            if (sum > W)
+            {
+                sum += w[indexes[i-1]];
+                toReturn[indexes[i-1]]++;
+            }
+            return toReturn;
+            
+        } catch (Exception e) {
+            System.out.println(e.toString());
+        }
+        
+        
+        return null;
+    }
+    
+    public int[] fk(int j,int s )
     {
         try {
             

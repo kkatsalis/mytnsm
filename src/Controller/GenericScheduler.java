@@ -1,6 +1,7 @@
 package Controller;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
@@ -20,8 +21,8 @@ public class GenericScheduler {
 	int resources_number;
 	int[][] reserved_resources; //[n][R]
 	Controller controller;
-	
-	
+
+
 	public GenericScheduler(Configuration confg, Controller controller) {
 		super();
 		this.config = confg;
@@ -32,7 +33,7 @@ public class GenericScheduler {
 		services_number=confg.getServices_number();
 		resources_number=config.getResources_number();
 
-	
+
 	}
 
 	//	 vmRequestMatrix[p][v][s] 
@@ -59,7 +60,7 @@ public class GenericScheduler {
 							if (checkIfFits) {
 								activationMatrix[n][p][v][s]++;
 								controller.getRunning_allocations()[n][p][v][s]++;
-							
+
 								break;
 							}
 						}
@@ -77,42 +78,51 @@ public class GenericScheduler {
 
 	}
 
-		
+
 
 
 
 
 
 	@SuppressWarnings("rawtypes")
-	private boolean checkIftheVMFits(int n,int v) {
+	private boolean checkIftheVMFits(int n,int vm) {
 
 
 		int[] resource_cost = new int[resources_number];
-		int[][] reserved_resources=new int[hosts_number][resources_number];
-		
-	
-		
+		int[] reserved_resources=new int[resources_number];
+
+		for (int r = 0; r < resources_number; r++) {
+			resource_cost[r]=Utilities.getVmResourceCost(config, vm, r);
+		}
+
 		boolean fits=true;
 		int[] host_max_capacity= Utilities.getHostMaxCapacity(config, n);
 		int load;
 
 		int vms_number=0;
+		int cost=0;
+		
 		for (int p = 0; p < providers_number; p++) {
 			for (int s = 0; s < services_number; s++) {
-				vms_number=controller.getRunning_allocations()[n][p][v][s];
-				for (int r = 0; r < resources_number; r++) {
-					reserved_resources[n][r]+=vms_number*Utilities.getVmResourceCost(config, v, r);
+				for (int v = 0; v < vm_types_number; v++) {
+					vms_number=controller.getRunning_allocations()[n][p][v][s];
+					for (int r = 0; r < resources_number; r++) {
+						cost=Utilities.getVmResourceCost(config, v, r);
+						reserved_resources[r]+=vms_number*cost;
+					//	System.out.println("Reserved resources:" + Arrays.toString(reserved_resources));
+					}
 				}
+
 			}
 		}
-		
+
 		for (int r = 0; r < resources_number; r++) {
 
-			load=reserved_resources[n][r]+resource_cost[r];
+			load=reserved_resources[r]+resource_cost[r];
 
 			if(load>host_max_capacity[r]){
 				fits=false;
-				System.out.println("Resource capacity violation: "+r);
+
 			}
 		}
 
@@ -120,7 +130,7 @@ public class GenericScheduler {
 
 	}
 
-	
+
 
 
 
