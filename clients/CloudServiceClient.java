@@ -31,6 +31,8 @@ public class CloudServiceClient {
 		int startFlushSlot = -1;
 		int stopFlushSlot = -1;
 		int stopSlot = 0;
+		int providersNum = 1;
+		String jujuURL = "";
 
 		String propFileName = "config.properties";
 
@@ -44,7 +46,8 @@ public class CloudServiceClient {
 
 			if (iStream != null) 
 				prop.load(iStream);
-
+			
+			providersNum = Integer.parseInt(prop.getProperty("providers"));
 			slotDuration = Long.parseLong(prop.getProperty("slotDuration"));
 			initialRate = Integer.parseInt(prop.getProperty("initialRate"));
 			concurrentRatio = Float.parseFloat(prop.getProperty("concurrentRatio"));
@@ -52,6 +55,7 @@ public class CloudServiceClient {
 			startFlushSlot = Integer.parseInt(prop.getProperty("startFlushSlot"));
 			stopFlushSlot = Integer.parseInt(prop.getProperty("stopFlushSlot"));
 			stopSlot = Integer.parseInt(prop.getProperty("stopSlot"));
+			jujuURL = prop.getProperty("jujuURL");
 
 		} catch(IOException e){
 			System.out.println("property file '" + propFileName + "' not found in the classpath");
@@ -130,8 +134,19 @@ public class CloudServiceClient {
 				concurrent = (int)(multiplier*concurrentRatio*initialRate);
 			}
 			
-			// getServiceIPs(String serviceName, String serviceURL)
-
+//			
+//			for (int j=0;j<providersNum;j++) {
+//				String[]  IPs = getServiceIPs("apachep"+j, jujuURL);
+//				ABServiceClient[] abs = new ABServiceClient[IPs.length];
+//				for (int i=0;i<IPs.length;i++) 
+//					abs[i] = new ABServiceClient(1, 1, rate/IPs.length, requests/IPs.length, concurrent/IPs.length, IPs[i]);
+//
+//				IPs = getServiceIPs("redisp"+j, jujuURL);
+//				RedisServiceClient[] redises = new RedisServiceClient[IPs.length];
+//				for (int i=0;i<IPs.length;i++) 
+//					redises[i] = new RedisServiceClient(1, 1, rate/IPs.length, requests/IPs.length, concurrent/IPs.length, IPs[i]);
+//			}
+			 
 			// Currently we have only 2 services deployed at 2 IPs, the total requests have to be split to the total number of deployed VMs+1 per service
 			ABServiceClient ab = new ABServiceClient(1, 1, rate, requests, concurrent, "http://10.95.196.78:80/");
 			RedisServiceClient red = new RedisServiceClient(1, 1, rate, requests, concurrent, "10.95.196.143");
