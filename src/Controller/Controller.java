@@ -17,6 +17,7 @@ import Enumerators.UpdateType;
 import Utilities.Utilities;
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
@@ -70,7 +71,7 @@ public class Controller {
 		this._config = config;
 		this._slots = slots;
 		this._hosts = hosts;
-		this.conn=Utilities.connect();
+		this.conn=Utilities.connect(config);
 		this.hosts_number = _config.getHosts_number();
 		this.providers_number = _config.getProviders_number();
 		this.vm_types_number = _config.getVm_types_number();
@@ -227,36 +228,25 @@ public class Controller {
 		try {
 
 			if (slot > 0) {
-				if (EStatsUpdateMethod.simple_moving_average.toString().equals(_config.getWeb_stats_update_method())) {
+				if (EStatsUpdateMethod.simple_average.toString().equals(_config.getWeb_stats_update_method())) {
 
 					index = _slots.length - slots_window;
-
-					if (index - 1 >= 0)
+					
 						for (int p = 0; p < this.providers_number; p++) {
 							for (int s = 0; s < this.services_number; s++) {
 								requestsMade = 0;
-								for (int i = index - 1; i <= slot; i++) {
-									requestsMade += Utilities.getRequestsMadefromDB(slot, p, s);
+								for (int i = 0; i < slot; i++) {
+									requestsMade += Utilities.getRequestsMadefromDB(conn,i, p, s);
 								}
-								_webRequestPattern[p][s] = requestsMade / slots_window;
+								_webRequestPattern[p][s] = requestsMade / slot;
+								_webRequestPattern[p][s] = 50000;
+
 							}
 
 						}
 
 				} else if (EStatsUpdateMethod.cumulative_moving_average.toString()
 						.equals(_config.getWeb_stats_update_method())) {
-
-					for (int p = 0; p < this.providers_number; p++) {
-						for (int s = 0; s < this.services_number; s++) {
-
-							requestsMade = 0;
-							for (int i = 0; i <= slot; i++) {
-								requestsMade += Utilities.getRequestsMadefromDB(slot, p, s);
-							}
-							_webRequestPattern[p][s] = requestsMade / slot;
-						}
-
-					}
 
 				} else if (EStatsUpdateMethod.weighted_moving_average.toString()
 						.equals(_config.getWeb_stats_update_method())) {
@@ -272,57 +262,7 @@ public class Controller {
 		}
 	}
 
-	// class StatisticsTimer extends TimerTask {
-	//
-	// int slot;
-	// int numberOfMachineStatsPerSlot =
-	// _config.getNumberOfMachineStatsPerSlot();
-	//
-	// StatisticsTimer(int slot) {
-	// this.slot = slot;
-	// }
-	//
-	// public void run() {
-	//
-	// if (_currentInstance < numberOfMachineStatsPerSlot) {
-	//
-	// // Utilities.updateSimulatorStatistics(_config, slot, _currentInstance);
-	//
-	// _currentInstance++;
-	//
-	// } else {
-	// stats_timer.cancel();
-	// }
-	//
-	// }
-	//
-	// }
 
-	// private void startNodesStatsTimer(int slot) {
-	//
-	// int statsUpdateInterval = _config.getSlotDuration() /
-	// _config.getNumberOfMachineStatsPerSlot();
-	//
-	// stats_timer = new Timer();
-	// _currentInstance = 0;
-	//
-	// if
-	// (_config.getSlotDurationMetric().equals(ESlotDurationMetric.milliseconds.toString()))
-	// stats_timer.scheduleAtFixedRate(new StatisticsTimer(slot), 0,
-	// statsUpdateInterval);
-	// else if
-	// (_config.getSlotDurationMetric().equals(ESlotDurationMetric.seconds.toString()))
-	// stats_timer.scheduleAtFixedRate(new StatisticsTimer(slot), 0,
-	// statsUpdateInterval * 1000);
-	// else if
-	// (_config.getSlotDurationMetric().equals(ESlotDurationMetric.minutes.toString()))
-	// stats_timer.scheduleAtFixedRate(new StatisticsTimer(slot), 0, 60 *
-	// statsUpdateInterval * 1000);
-	// else if
-	// (_config.getSlotDurationMetric().equals(ESlotDurationMetric.hours.toString()))
-	// stats_timer.scheduleAtFixedRate(new StatisticsTimer(slot), 0, 3600 *
-	// statsUpdateInterval * 1000);
-	// }
 
 	private void addVmRequestsPerService(ServiceRequest _serviceRequest, int slot) {
 
@@ -337,7 +277,7 @@ public class Controller {
 		// Solves the VM mapping problem
 		int[] _vms = null;
 		if ((_config.getAlgorithm()).equals(EAlgorithms.FirstFit.toString()))
-			_vms = _cplexData.fk(providerID, serviceID);
+			_vms = _cplexData.fk(_webRequestPattern,providerID, serviceID);
 		else if ((_config.getAlgorithm()).equals(EAlgorithms.Lyapunov.toString()))
 			_vms=_cplexData.f(_cplexData,providerID, serviceID);
 
@@ -495,7 +435,7 @@ public class Controller {
 				for (int p = 0; p < providers_number; p++) {
 
 					for (ServiceRequest request : this.slot.getServiceRequests2Remove()[p]) {
-						service_name = Utilities.getServiceName(_config, request.slotStart, p, request.serviceID);
+						service_name = Utilities.getServiceName(_config, p, request.serviceID);
 
 						Hashtable parameters = new Hashtable();
 						parameters.put("service_name", service_name);
@@ -555,7 +495,7 @@ public class Controller {
 						for (int v = 0; v < vm_types_number; v++) {
 							for (int s = 0; s < services_number; s++) {
 
-								service_name = Utilities.buildServiceName(config, slot, p, s);
+								service_name = Utilities.buildServiceName(config, p, s);
 								charm_name = config.getService_charm()[s];
 								vm_type_name = Utilities.getVMTypeName(v);
 								vm_name = slot + "_h" + n + "_p" + p + "_v" + v + "_s" + s + "_";
@@ -623,7 +563,16 @@ public class Controller {
 	public Connection getConn() {
 		return conn;
 	}
+	
+	public void disConnectDB() {
+		try {
+			if (conn != null)
+				conn.close();
 
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		} 
+	}
 
 
 

@@ -6,12 +6,19 @@
 package Utilities;
 
 import Controller.Configuration;
+
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Random;
+import java.util.StringTokenizer;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.ResultSet;
 /**
  *
  * @author kostas
@@ -28,11 +35,13 @@ public class Utilities {
 	}
 
 
-	public static Connection connect() {
+	public static Connection connect(Configuration config) {
 		Connection conn = null;
 		try {
 			// db parameters
-			String url = "jdbc:sqlite:tnsm_db";
+			String url = "jdbc:sqlite:";
+
+			url+="Sim"+config.getSimulationID()+"_"+config.getAlgorithm();			
 			// create a connection to the database
 			conn = DriverManager.getConnection(url);
 
@@ -56,14 +65,14 @@ public class Utilities {
 		int services_number = config.getServices_number();
 		int vms_number=0;
 		int total_vms_number=0;
-		
+
 		for (int n = 0; n < hosts_number; n++) {
 			for (int p = 0; p < providers_number; p++) {
 				for (int v = 0; v < vm_types_number; v++) {
 					for (int s = 0; s < services_number; s++) {
 						vms_number = activation_matrix[n][p][v][s];
 						total_vms_number=total_vms_allocated[p][v][s];
-						
+
 						try{
 							PreparedStatement pstmt = conn.prepareStatement(sql); 
 							pstmt.setInt(1, sim_id);
@@ -77,7 +86,7 @@ public class Utilities {
 							pstmt.setInt(9, vms_number);
 							pstmt.setDouble(10,total_vms_number);
 							pstmt.setDouble(11, benefit);
-							
+
 
 							pstmt.executeUpdate();
 						} catch (SQLException e) {
@@ -121,7 +130,7 @@ public class Utilities {
 				}
 			}	
 		}
-		
+
 	}
 
 
@@ -212,29 +221,63 @@ public class Utilities {
 
 	}
 
-	public static int getRequestsMadefromDB(int slot, int p, int s) {
-		// TODO Auto-generated method stub
-		return 10000;
-	}
-
-
-
-	public static String buildServiceName(Configuration config,int slot, int provider_id, int service_id) {
+	public static String buildServiceName(Configuration config, int provider_id, int service_id) {
 
 		String alias=config.getService_alias()[service_id];
-		String service_name=alias+"s"+slot+"p"+provider_id;
+		String service_name=alias+"p"+provider_id;
+
+		return service_name;
+	}
+
+	public static String getServiceName(Configuration config,int provider_id, int service_id) {
+
+		String alias=config.getService_alias()[service_id];
+		String service_name=alias+"p"+provider_id;
+
+		return service_name;
+	}
+
+	static ResultSet executeQR(String query, Connection conn){
+		ResultSet rs = null;
+		Statement stmt = null;
+		try {
+			stmt = conn.createStatement();
+			rs = stmt.executeQuery(query);
+		} catch(SQLException e) {
+			System.err.println("Query "+query+" failed");
+		}
+		return rs;
+	}
+
+	public static int getRequestsMadefromDB(Connection conn,int slot, int p, int s	)
+	{
+
+
+		int rows = 0;
+
+
+		String qr = "SELECT RESPONSE_TIME FROM CLIENTS WHERE PROVIDER_ID="+p
+				+" AND service_id="+s+" AND Slot="+slot;
 		
-		return service_name;
+		try {				
+			
+			ResultSet rs = executeQR(qr,conn);
+			while (rs.next()) {
+				rows++;
+			}
+			
+
+		}catch(NoSuchElementException e) {
+			e.printStackTrace();
+
+		} catch(SQLException e) {
+			System.err.println("Query failed");
+		}
+		System.out.println("Client Stats:slot"+slot+"-p"+p+" requests:"+rows);
+		return rows;
+
 	}
-
-	public static String getServiceName(Configuration config,int slot, int provider_id, int service_id) {
-
-		String alias=config.getService_alias()[service_id];
-		String service_name=alias+"s"+slot+"p"+provider_id;
-
-		return service_name;
-	}
-
-
-
 }
+
+
+

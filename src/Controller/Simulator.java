@@ -179,17 +179,27 @@ public class Simulator {
 	private int createNewNfvRequest(int providerID, int serviceID, int currentSlot) {
 
 		int slot2RemoveService = 0;
-
-		int lifetime = calculateServiceLifeTime(providerID, serviceID);
-		int slots_away;
+		int slots_away=0;
+		int slots_diff=0;
 		
+		int lifetime = calculateServiceLifeTime(providerID, serviceID);
 		int end_slot=checkIfServiceIsAlive(providerID, serviceID, currentSlot);
 
-		if(end_slot!=-1)
+		if(end_slot!=-1){
+			slots_diff=end_slot-currentSlot;
 			currentSlot=end_slot; //postpone the request until is the previous is finished
-			
+		}
+		
+		
 		if (lifetime < 1)
 			lifetime = 2;
+		
+		if(slots_diff>0)
+			if (lifetime>slots_diff)
+				lifetime=lifetime-slots_diff;
+			else
+				lifetime=1;
+		
 		slot2RemoveService = currentSlot + lifetime;
 
 		ServiceRequest newServiceRequest = new ServiceRequest(_config,providerID, serviceID, lifetime);
@@ -333,6 +343,7 @@ public class Simulator {
 				} else {
 					experimentStop = System.currentTimeMillis();
 					controllerTimer.cancel();
+					_controller.disConnectDB();
 					System.exit(0);
 				}
 			} catch (IOException ex) {

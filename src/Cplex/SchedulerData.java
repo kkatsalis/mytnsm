@@ -256,11 +256,11 @@ public class SchedulerData {
         return null;
     }
     
-    public int[] fk(int j,int s )
+    public int[] fk(int[][] requests,int j,int s )
     {
         try {
             
-            int W = -this.r[j][s];
+            int W = -requests[j][s];
             
             
             double v[] = new double[this.V];

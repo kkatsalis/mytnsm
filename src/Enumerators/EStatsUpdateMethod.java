@@ -11,6 +11,7 @@ package Enumerators;
  */
 
 public enum EStatsUpdateMethod {
+simple_average,
 simple_moving_average, 
 cumulative_moving_average,
 weighted_moving_average,

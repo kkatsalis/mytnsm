@@ -26,7 +26,8 @@ public class ClientsSimulator {
 	Timer[][][] clientsTimer; // [p][s][c]
 	WebRequestStatsSlot[] _webRequestStatsSlot;
 	Controller controller;
-
+	int requests[][][];
+	
 	public ClientsSimulator(Configuration config, Controller controller) {
 		this.config = config;
 		this.controller = controller;
@@ -36,7 +37,8 @@ public class ClientsSimulator {
 		this.services_number = config.getServices_number();
 		this.clients = new Client[providers_number][services_number][clients_number];
 		this.clientsTimer = new Timer[providers_number][services_number][clients_number];
-
+		requests = new int[config.getProviders_number()][config.getServices_number()][clients_config.getClients_number()];
+		
 		for (int p = 0; p < providers_number; p++) {
 			for (int s = 0; s < services_number; s++) {
 				for (int c = 0; c < clients_number; c++) {
@@ -54,8 +56,8 @@ public class ClientsSimulator {
 		for (int p = 0; p < providers_number; p++) {
 			for (int s = 0; s < services_number; s++) {
 				for (int c = 0; c < clients_number; c++) {
-					clientsTimer[p][s][c].schedule(new ExecuteClientRequest(controller, config, clients_config,
-							clientsTimer, clients, p, s, c), 100); 
+					clientsTimer[p][s][c].scheduleAtFixedRate(new ExecuteClientRequest(controller, config, clients_config,
+							clientsTimer, clients, p, s, c,requests),0, 1); 
 					// 100)
 				}
 			}
@@ -76,10 +78,11 @@ class ExecuteClientRequest extends TimerTask {
 	Timer[][][] clientsTimer;
 	Controller controller;
 	FakeServers fake_servers;
-	int requests[][];
+	int requests[][][];
 
 	public ExecuteClientRequest(Controller controller, Configuration config, ClientsConfiguration clients_config,
-			Timer[][][] clientsTimer, Client[][][] clients, int providerID, int serviceID, int clientID) {
+			Timer[][][] clientsTimer, Client[][][] clients, int providerID, int serviceID, int clientID,int requests[][][]) {
+		this.requests=requests;
 		this.provider_id = providerID;
 		this.service_id = serviceID;
 		this.client_id = clientID;
@@ -89,7 +92,7 @@ class ExecuteClientRequest extends TimerTask {
 		this.clients_config = clients_config;
 		this.controller = controller;
 		this.fake_servers = new FakeServers(config, clients_config);
-		requests = new int[clients_config.getClients_number()][config.getServices_number()];
+		
 	}
 
 	@Override
@@ -98,11 +101,10 @@ class ExecuteClientRequest extends TimerTask {
 		int vms_number = 0;
 		double response_time = 0;
 		int[][][][] running_allocations = controller.getRunning_allocations();
-		requests[service_id][client_id]++;
+		requests[provider_id][service_id][client_id]++;
 		for (int n = 0; n < config.getHosts_number(); n++) {
 			for (int v = 0; v < config.getVm_types_number(); v++) {
 				vms_number += running_allocations[n][provider_id][v][service_id];
-
 			}
 		}
 
@@ -114,7 +116,7 @@ class ExecuteClientRequest extends TimerTask {
 		} else
 			response_time = fake_servers.cloudServerResponseTime(service_id);
 
-		sendClientStatsToDB(controller.getSlot(), provider_id, service_id, client_id, requests[service_id][client_id],
+		sendClientStatsToDB(controller.getSlot(), provider_id, service_id, client_id, requests[provider_id][service_id][client_id],
 				response_time);
 
 		int duration = config.getSlotDuration();
@@ -129,9 +131,14 @@ class ExecuteClientRequest extends TimerTask {
 
 		double x = duration * calculateWebRequestInterarrivalInterval(provider_id, service_id, client_id);
 		long delay = (long) x;
-
+		if(delay==0)
+			delay=1;
+		
 		clientsTimer[provider_id][service_id][client_id].schedule(new ExecuteClientRequest(controller, config,
-				clients_config, clientsTimer, clients, provider_id, service_id, client_id), delay);
+				clients_config, clientsTimer, clients, provider_id, service_id, client_id,requests),0,1);
+//		
+//		if(provider_id==1)
+//		System.out.println(requests[provider_id][service_id][client_id]);
 
 	}
 
