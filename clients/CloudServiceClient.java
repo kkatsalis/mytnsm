@@ -1,6 +1,9 @@
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Properties;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -14,26 +17,60 @@ public class CloudServiceClient {
 	public static void main(String[] args){
 		/*
 		String[] ips = getServiceIPs("","");
-		
+
 		for (String ip:ips)
 		{
 			System.out.println(ip);
 		}
-		*/
-		
+		 */
+
+		long slotDuration = 0;
+		int initialRate = 0; // Poisson mean request rate in requests per second
+		float concurrentRatio = 1;
+		int multiplier = 1;
+		int startFlushSlot = -1;
+		int stopFlushSlot = -1;
+		int stopSlot = 0;
+
+		String propFileName = "config.properties";
+
+		// Read config properties
+
+		try {
+
+			InputStream iStream = null;
+			Properties prop = new Properties();
+			iStream = new FileInputStream(propFileName);
+
+			if (iStream != null) 
+				prop.load(iStream);
+
+			slotDuration = Long.parseLong(prop.getProperty("slotDuration"));
+			initialRate = Integer.parseInt(prop.getProperty("initialRate"));
+			concurrentRatio = Float.parseFloat(prop.getProperty("concurrentRatio"));
+			multiplier = Integer.parseInt(prop.getProperty("multiplier"));
+			startFlushSlot = Integer.parseInt(prop.getProperty("startFlushSlot"));
+			stopFlushSlot = Integer.parseInt(prop.getProperty("stopFlushSlot"));
+			stopSlot = Integer.parseInt(prop.getProperty("stopSlot"));
+
+		} catch(IOException e){
+			System.out.println("property file '" + propFileName + "' not found in the classpath");
+		}
+
 		// The aggregate request rate has to be shared among edge IPs, by starting one client thread for each separate IP/URL
 		// The data per client have to be stored also per IP, so the IP has to be put in the serviceStats tables.
 		// The getRequests() and getResponseTime() have to be adjusted accordingly
 		// For each Thread I need a setRate method for dynamically adjusting the send rate
-		
-		
+
+
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 		///////////////////////////// AB ////////////////////////////////////////////////////////
 
 		String abTable = "CREATE TABLE ABSTATS " +
 				"(ts TIMESTAMP not NULL, " +
-				" CLIENT_ID VARCHAR(50) not NULL, " + 
-				" PROVIDER INTEGER not NULL, " + 
+				" CLIENT_ID INTEGER not NULL, " + 
+				" PROVIDER INTEGER not NULL, " +
+				" SERVICEURL VARCHAR(200) not NULL, "+
 				" requests INTEGER not NULL, "+
 				" concurrency INTEGER not NULL, "+ 
 				" request_rate FLOAT not NULL, "+
@@ -50,17 +87,7 @@ public class CloudServiceClient {
 				" max_connect INTEGER not NULL, "+
 				" fractions VARCHAR(120) not NULL, "+
 				" latencies VARCHAR(120) not NULL, "+
-				" PRIMARY KEY ( TS,PROVIDER,CLIENT_ID ))"; 
-
-
-		
-		float request_rate = 300; // Poisson mean request rate in requests per second
-		int concurrent = 300;
-
-		ABServiceClient ab = new ABServiceClient(1, "1", request_rate, concurrent, concurrent, "http://10.95.196.78:80/");
-		ab.createTable(abTable);
-
-		new ClientThread(request_rate, concurrent, 20000, ab).start();
+				" PRIMARY KEY ( TS,PROVIDER,CLIENT_ID, SERVICEURL ))"; 
 
 
 		////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -68,8 +95,9 @@ public class CloudServiceClient {
 
 		String redTable = "CREATE TABLE REDISSTATS " +
 				"(ts TIMESTAMP not NULL, " +
-				" CLIENT_ID VARCHAR(50) not NULL, " + 
-				" PROVIDER INTEGER not NULL, " + 
+				" CLIENT_ID INTEGER not NULL, " + 
+				" PROVIDER INTEGER not NULL, " +
+				" SERVICEURL VARCHAR(200) not NULL, "+
 				" requests INTEGER not NULL, "+
 				" concurrency INTEGER not NULL, "+ 
 				" request_rate FLOAT not NULL, "+
@@ -79,16 +107,55 @@ public class CloudServiceClient {
 				" get_completed INTEGER not NULL, " +
 				" get_percentiles VARCHAR(120) not NULL, "+
 				" get_latencies VARCHAR(120) not NULL, "+
-				" PRIMARY KEY ( TS,PROVIDER,CLIENT_ID ))"; 
+				" PRIMARY KEY ( TS,PROVIDER,CLIENT_ID, SERVICEURL ))"; 
 
-		request_rate = 300; // Poisson mean request rate in requests per second
-		concurrent = 300;
 
-		RedisServiceClient red = new RedisServiceClient(1, "1", request_rate, concurrent, concurrent, "10.95.196.143");
-		red.createTable(redTable);
-		new ClientThread(request_rate, concurrent, 20000, red).start();
-		
-		
+
+		int rate = (int)initialRate;
+		int requests = (int)(concurrentRatio*initialRate);
+		int concurrent = (int)(concurrentRatio*initialRate);
+
+		int slot = 0;
+
+		while (slot <= stopSlot) {
+			System.out.println("--------------------------------- TIME SLOT "+slot+" -----------------------------");
+			if (slot == startFlushSlot){
+				rate = (int)multiplier*initialRate;
+				requests = (int)(multiplier*concurrentRatio*initialRate);
+				concurrent = (int)(multiplier*concurrentRatio*initialRate);
+			} else if (slot == stopFlushSlot) {
+				multiplier = 1;
+				rate = (int)multiplier*initialRate;
+				requests = (int)(multiplier*concurrentRatio*initialRate);
+				concurrent = (int)(multiplier*concurrentRatio*initialRate);
+			}
+			
+			// getServiceIPs(String serviceName, String serviceURL)
+
+			// Currently we have only 2 services deployed at 2 IPs, the total requests have to be split to the total number of deployed VMs+1 per service
+			ABServiceClient ab = new ABServiceClient(1, 1, rate, requests, concurrent, "http://10.95.196.78:80/");
+			RedisServiceClient red = new RedisServiceClient(1, 1, rate, requests, concurrent, "10.95.196.143");
+
+			if (slot == 0)
+			{
+				ab.createTable(abTable);
+				red.createTable(redTable);
+			}
+			ClientThread abthread = new ClientThread(rate, concurrent, slotDuration-1000, ab);
+			ClientThread redthread = new ClientThread(rate, concurrent, slotDuration-1000, red);
+			abthread.start();
+			redthread.start();
+
+			try {
+				Thread.sleep(slotDuration);
+			} catch(InterruptedException e) {
+				e.printStackTrace();
+			}
+
+			slot++;
+		}
+
+
 	}
 
 
@@ -111,7 +178,7 @@ public class CloudServiceClient {
 			IPs[0] = cloudIP;
 			for (int i = 0; i < arr.length(); i++) 
 				IPs[i+1] = arr.getString(i);
-			
+
 		} catch(ClientProtocolException e) {
 			e.printStackTrace();
 		} catch(IOException e) {
@@ -120,7 +187,7 @@ public class CloudServiceClient {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		return IPs;
 	}
 
@@ -147,6 +214,7 @@ class ClientThread extends Thread
 		long interarrival = 0;
 		long total_requests = 0;
 		long time = System.currentTimeMillis();
+		int iterations=0;
 
 		while (time<endTime) { 
 			try {
@@ -154,16 +222,17 @@ class ClientThread extends Thread
 
 				total_requests += concurrent_requests;
 				interarrival = Math.round(-1000*(Math.log(Math.random())/Math.log(Math.E))/(request_rate/concurrent_requests));
-				System.out.println("SLEEP TIME: "+interarrival);
+				//System.out.println("SLEEP TIME: "+interarrival);
 
 				Thread.sleep(interarrival);
 			} catch(InterruptedException e) {
 				e.printStackTrace();
 			}
+			iterations++;
 			time = System.currentTimeMillis();
 		}
 
-		System.out.println("MEAN REQUEST RATE : "+(total_requests/20.0));
+		System.out.println("MEAN REQUEST RATE : "+(total_requests/iterations));
 	}
 }
 

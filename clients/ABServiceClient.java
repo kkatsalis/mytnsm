@@ -19,7 +19,7 @@ public class ABServiceClient implements Runnable {
 
 	Connection conn = null;
 	int provider;
-	String client_id;
+	int client_id;
 	float request_rate;
 	int requests;
 	int concurrency;
@@ -61,6 +61,7 @@ public class ABServiceClient implements Runnable {
 		String sql = "INSERT INTO ABSTATS(ts, "+
 				" client_id, "+
 				" PROVIDER, " + 
+				" SERVICEURL, "+
 				" requests, "+
 				" concurrency, "+ 
 				" request_rate, "+
@@ -76,7 +77,7 @@ public class ABServiceClient implements Runnable {
 				" median_connect, "+
 				" max_connect, "+
 				" fractions, "+
-				" latencies) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+				" latencies) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
 		try {
 			if (conn == null) connectDB();
@@ -84,38 +85,44 @@ public class ABServiceClient implements Runnable {
 			PreparedStatement pstmt = conn.prepareStatement(sql);
 			
 			pstmt.setTimestamp(1, data.ts);
-			pstmt.setString(2, data.client_id);
+			pstmt.setInt(2, data.client_id);
 			pstmt.setInt(3, data.provider);
-			pstmt.setInt(4, data.requests);
-			pstmt.setInt(5, data.concurrency);
-			pstmt.setFloat(6, data.request_rate);
-			pstmt.setInt(7, data.completed);
-			pstmt.setInt(8, data.failed);
-			pstmt.setFloat(9, data.rps);
-			pstmt.setFloat(10, data.mtpr);
-			pstmt.setFloat(11, data.mtprc);
-			pstmt.setFloat(12, data.transfer_rate);
-			pstmt.setInt(13, data.min_connect);
-			pstmt.setFloat(14, data.mean_connect);
-			pstmt.setFloat(15, data.sd_connect);
-			pstmt.setInt(16, data.median_connect);
-			pstmt.setInt(17, data.max_connect);
+			pstmt.setString(4, data.url);
+			pstmt.setInt(5, data.requests);
+			pstmt.setInt(6, data.concurrency);
+			pstmt.setFloat(7, data.request_rate);
+			pstmt.setInt(8, data.completed);
+			pstmt.setInt(9, data.failed);
+			pstmt.setFloat(10, data.rps);
+			pstmt.setFloat(11, data.mtpr);
+			pstmt.setFloat(12, data.mtprc);
+			pstmt.setFloat(13, data.transfer_rate);
+			pstmt.setInt(14, data.min_connect);
+			pstmt.setFloat(15, data.mean_connect);
+			pstmt.setFloat(16, data.sd_connect);
+			pstmt.setInt(17, data.median_connect);
+			pstmt.setInt(18, data.max_connect);
 			
 			String tmp = "";
-			for (int i=0;i<data.fractions.length-1;i++)
-				tmp += data.fractions[i] +",";
-			tmp += data.fractions[data.fractions.length-1];
-			pstmt.setString(18, tmp);
-			
-			tmp = "";
-			for (int i=0;i<data.latencies.length-1;i++)
-				tmp += data.latencies[i] +",";
-			tmp += data.latencies[data.latencies.length-1];
-			
+			if (data.fractions != null) {
+				for (int i=0;i<data.fractions.length-1;i++)
+					tmp += data.fractions[i] +",";
+				tmp += data.fractions[data.fractions.length-1];
+			} else 
+				System.out.println("I did not get any response time percentiles !!!!");
 			pstmt.setString(19, tmp);
-			
+
+			tmp = "";
+			if (data.latencies != null) {
+				for (int i=0;i<data.latencies.length-1;i++)
+					tmp += data.latencies[i] +",";
+				tmp += data.latencies[data.latencies.length-1];
+			} else 
+				System.out.println("I did not get any response time latencies !!!!");
+			pstmt.setString(20, tmp);
+
 			pstmt.executeUpdate();
-			
+
 			
 		} catch (SQLException e) {
 			System.out.println(e);
@@ -205,7 +212,7 @@ public class ABServiceClient implements Runnable {
  		return data;
 	}
 
-	public ABServiceClient(int provider, String client_id, float request_rate, int requests, int concurrency, String url)
+	public ABServiceClient(int provider, int client_id, float request_rate, int requests, int concurrency, String url)
 	{
 		this.provider = provider;
 		this.client_id = client_id;
@@ -225,18 +232,18 @@ public class ABServiceClient implements Runnable {
 		try {
 			p = pb.start();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		try {
 			ABdata data = parseAB(p.getInputStream());
 			data.provider = provider;
-			data.client_id = client_id+"_"+UUID.randomUUID();
+			//data.client_id = client_id+"_"+UUID.randomUUID();
+			data.client_id = client_id;
+			data.url = url;
 			data.requests = requests;
 			data.request_rate = request_rate;
 			insertAB(data);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch(NoSuchElementException e) {
 			e.printStackTrace();
@@ -247,8 +254,9 @@ public class ABServiceClient implements Runnable {
 	public static void main(String[] args){
 		String abTable = "CREATE TABLE ABSTATS " +
                 "(ts TIMESTAMP not NULL, " +
-                " CLIENT_ID VARCHAR(50) not NULL, " + 
+                " CLIENT_ID INTEGER not NULL, " + 
                 " PROVIDER INTEGER not NULL, " + 
+                " SERVICEURL VARCHAR(200) not NULL, "+
                 " requests INTEGER not NULL, "+
             	" concurrency INTEGER not NULL, "+ 
                 " request_rate FLOAT not NULL, "+
@@ -265,7 +273,7 @@ public class ABServiceClient implements Runnable {
             	" max_connect INTEGER not NULL, "+
             	" fractions VARCHAR(120) not NULL, "+
             	" latencies VARCHAR(120) not NULL, "+
-                " PRIMARY KEY ( TS,PROVIDER,CLIENT_ID ))"; 
+                " PRIMARY KEY ( TS,PROVIDER,CLIENT_ID,SERVICEURL ))"; 
 		
 		
 		
@@ -273,7 +281,7 @@ public class ABServiceClient implements Runnable {
 		
 		int concurrent = 300;
 		
-		ABServiceClient ab = new ABServiceClient(1, "1", request_rate, concurrent, concurrent, "http://10.95.196.78:80/");
+		ABServiceClient ab = new ABServiceClient(1, 1, request_rate, concurrent, concurrent, "http://10.95.196.78:80/");
 		ab.createTable(abTable);
 
 		new Thread(ab).start();
@@ -283,8 +291,9 @@ public class ABServiceClient implements Runnable {
 
 class ABdata {
 	Timestamp ts;
-	String client_id;
+	int client_id;
 	int provider;
+	String url;
 	int requests;
 	int concurrency;
 	float request_rate;

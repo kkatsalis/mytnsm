@@ -18,7 +18,7 @@ public class RedisServiceClient implements Runnable {
 
 	Connection conn = null;
 	int provider;
-	String client_id;
+	int client_id;
 	float request_rate;
 	int requests;
 	int concurrency;
@@ -60,6 +60,7 @@ public class RedisServiceClient implements Runnable {
 		String sql = "INSERT INTO REDISSTATS(ts, "+
 				" client_id, "+
 				" PROVIDER, " + 
+				" SERVICEURL, "+
 				" requests, "+
 				" concurrency, "+ 
 				" request_rate, "+
@@ -68,7 +69,7 @@ public class RedisServiceClient implements Runnable {
 				" set_latencies, "+
 				" get_completed, "+
 				" get_percentiles, "+
-				" get_latencies) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)";
+				" get_latencies) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
 		try {
 			if (conn == null) connectDB();
@@ -76,21 +77,21 @@ public class RedisServiceClient implements Runnable {
 			PreparedStatement pstmt = conn.prepareStatement(sql);
 			
 			pstmt.setTimestamp(1, data.ts);
-			pstmt.setString(2, data.client_id);
+			pstmt.setInt(2, data.client_id);
 			pstmt.setInt(3, data.provider);
-			pstmt.setInt(4, data.requests);
-			pstmt.setInt(5, data.concurrency);
-			pstmt.setFloat(6, data.request_rate);
-			pstmt.setFloat(7, data.set_completed);
-			pstmt.setString(8, data.set_percentiles);
-			pstmt.setString(9, data.set_latencies);
-			pstmt.setFloat(10, data.get_completed);
-			pstmt.setString(11, data.get_percentiles);
-			pstmt.setString(12, data.get_latencies);
+			pstmt.setString(4, data.url);
+			pstmt.setInt(5, data.requests);
+			pstmt.setInt(6, data.concurrency);
+			pstmt.setFloat(7, data.request_rate);
+			pstmt.setFloat(8, data.set_completed);
+			pstmt.setString(9, data.set_percentiles);
+			pstmt.setString(10, data.set_latencies);
+			pstmt.setFloat(11, data.get_completed);
+			pstmt.setString(12, data.get_percentiles);
+			pstmt.setString(13, data.get_latencies);
 			
 			pstmt.executeUpdate();
-			
-			
+		
 		} catch (SQLException e) {
 			System.out.println(e);
 		}
@@ -186,7 +187,7 @@ public class RedisServiceClient implements Runnable {
  		return data;
 	}
 
-	public RedisServiceClient(int provider, String client_id, float request_rate, int requests, int concurrency, String ip)
+	public RedisServiceClient(int provider, int client_id, float request_rate, int requests, int concurrency, String ip)
 	{
 		this.provider = provider;
 		this.client_id = client_id;
@@ -199,7 +200,6 @@ public class RedisServiceClient implements Runnable {
 	public void run() 
 	{ 
 		ProcessBuilder pb =
-
 				new ProcessBuilder("redis-benchmark", "-c", ""+concurrency, "-n", ""+request_rate, "-h", ip);
 		pb.directory(new File("."));
 		Process p = null;
@@ -214,7 +214,9 @@ public class RedisServiceClient implements Runnable {
 			RedisData data = parseRED(p.getInputStream());
 			//System.out.println("PARSED DATA");
 			data.provider = provider;
-			data.client_id = client_id+"_"+UUID.randomUUID();
+			//data.client_id = client_id+"_"+UUID.randomUUID();
+			data.client_id = client_id;
+			data.url = ip;
 			data.requests = requests;
 			data.request_rate = request_rate;
 			insertRED(data);
@@ -230,8 +232,9 @@ public class RedisServiceClient implements Runnable {
 	public static void main(String[] args){
 		String redTable = "CREATE TABLE REDISSTATS " +
                 "(ts TIMESTAMP not NULL, " +
-                " CLIENT_ID VARCHAR(50) not NULL, " + 
+                " CLIENT_ID INTEGER not NULL, " + 
                 " PROVIDER INTEGER not NULL, " + 
+                " SERVICEURL VARCHAR(200) not NULL, "+
                 " requests INTEGER not NULL, "+
             	" concurrency INTEGER not NULL, "+ 
                 " request_rate FLOAT not NULL, "+
@@ -241,13 +244,13 @@ public class RedisServiceClient implements Runnable {
             	" get_completed INTEGER not NULL, " +
              	" get_percentiles VARCHAR(120) not NULL, "+
              	" get_latencies VARCHAR(120) not NULL, "+
-                " PRIMARY KEY ( TS,PROVIDER,CLIENT_ID ))"; 
+                " PRIMARY KEY ( TS,PROVIDER,CLIENT_ID,SERVICEURL ))"; 
 	
 		float request_rate = 300; // Poisson mean request rate in requests per second
 		
 		int concurrent = 300;
 		
-		RedisServiceClient red = new RedisServiceClient(1, "1", request_rate, concurrent, concurrent, "10.95.196.143");
+		RedisServiceClient red = new RedisServiceClient(1, 1, request_rate, concurrent, concurrent, "10.95.196.143");
 		red.createTable(redTable);
 		new Thread(red).start();
 
@@ -256,8 +259,9 @@ public class RedisServiceClient implements Runnable {
 
 class RedisData {
 	Timestamp ts;
-	String client_id;
+	int client_id;
 	int provider;
+	String url;
 	int requests;
 	int concurrency;
 	float request_rate;
