@@ -136,7 +136,7 @@ public class CloudServiceClient {
 			
 //			
 //			for (int j=0;j<providersNum;j++) {
-//				String[]  IPs = getServiceIPs("apachep"+j, jujuURL);
+//				String[]  IPs = getServiceIPs("apachep"+j, jujuURL+"apachep"+j);
 //				ABServiceClient[] abs = new ABServiceClient[IPs.length];
 //				for (int i=0;i<IPs.length;i++) 
 //					abs[i] = new ABServiceClient(1, 1, rate/IPs.length, requests/IPs.length, concurrent/IPs.length, IPs[i]);
@@ -187,8 +187,8 @@ public class CloudServiceClient {
 			String responseString = new BasicResponseHandler().handleResponse(response);
 			//String responseString="{\"public-address\":\"87.42.3.23\",\"edge-ips\":[\"A\",\"B\"]}";
 			JSONObject obj = new JSONObject(responseString);
-			String cloudIP = obj.getString("public-address");
-			JSONArray arr = obj.getJSONArray("edge-ips");
+			String cloudIP = obj.getString("remote-ip");
+			JSONArray arr = obj.getJSONArray("local-ips");
 			IPs = new String[arr.length()+1];
 			IPs[0] = cloudIP;
 			for (int i = 0; i < arr.length(); i++) 
