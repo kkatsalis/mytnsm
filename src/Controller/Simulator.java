@@ -62,7 +62,6 @@ public class Simulator {
 
 	List<String> _remote_machine_ips;
 
-	ClientsSimulator _clients_simulator;
 	
 	public Simulator() {
 
@@ -72,7 +71,6 @@ public class Simulator {
 		this.services_number = _config.getServices_number();
 
 		this.controllerTimer = new Timer();
-
 		this._webUtility = new WebUtilities(_config);
 
 		System.out.println("********** System Initialization Phase ****************");
@@ -126,8 +124,7 @@ public class Simulator {
 		System.out.println("Initialization: Controller Object Ready");
 
 		// ---------- web Clients
-		this._clients_simulator=new ClientsSimulator(_config, _controller);
-		System.out.println("Initialization: Web Clients Object Ready");
+		
 
 
 	}
@@ -353,13 +350,15 @@ public class Simulator {
 		}
 	}
 
-	public ClientsSimulator get_clients_simulator() {
-		return _clients_simulator;
-	}
 
 	public Configuration get_config() {
 		return _config;
 	}
+
+	public Controller get_controller() {
+		return _controller;
+	}
+
 
 	
 	

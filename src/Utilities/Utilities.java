@@ -19,6 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 /**
  *
  * @author kostas
@@ -133,7 +134,6 @@ public class Utilities {
 
 	}
 
-
 	public static String getVMTypeName(int vm_id){
 
 		String vm_type_name="";
@@ -156,7 +156,6 @@ public class Utilities {
 		return vm_type_name;
 
 	}
-
 
 	@SuppressWarnings("rawtypes")
 	public static int[] getHostMaxCapacity(Configuration config, int host_id){
@@ -252,18 +251,17 @@ public class Utilities {
 	public static int getRequestsMadefromDB(Connection conn,int slot, int p, int s	)
 	{
 
+		int requests = 0;
 
-		int rows = 0;
-
-
-		String qr = "SELECT RESPONSE_TIME FROM CLIENTS WHERE PROVIDER_ID="+p
+		String qr = "SELECT request_index FROM CLIENTS WHERE PROVIDER_ID="+p
 				+" AND service_id="+s+" AND Slot="+slot;
 		
 		try {				
-			
 			ResultSet rs = executeQR(qr,conn);
+			 
 			while (rs.next()) {
-				rows++;
+				requests=Integer.valueOf(rs.getString("request_index"));
+				System.out.println("slot"+slot+"_p"+p+"total-req: "+requests);
 			}
 			
 
@@ -273,8 +271,7 @@ public class Utilities {
 		} catch(SQLException e) {
 			System.err.println("Query failed");
 		}
-		System.out.println("Client Stats:slot"+slot+"-p"+p+" requests:"+rows);
-		return rows;
+		return requests;
 
 	}
 }

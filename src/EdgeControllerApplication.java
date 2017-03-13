@@ -6,6 +6,7 @@
 import java.util.ArrayList;
 import java.util.List;
 
+import Clients.ClientsSimulator;
 import Controller.Simulator;
 import Enumerators.EAlgorithms;
 
@@ -37,9 +38,12 @@ public class EdgeControllerApplication {
 		
 		simulator.StartExperiment();
 	
-		if(simulator.get_config().getSimulation_mode())
-			simulator.get_clients_simulator().startClientsRequests();
-
+		if(simulator.get_config().getSimulation_mode()){
+			ClientsSimulator clients_simulator=new ClientsSimulator(simulator.get_config(),simulator.get_controller());
+		
+			System.out.println("Initialization: Web Clients Object Ready");
+			clients_simulator.start();
+		}
 		
 	}
 
