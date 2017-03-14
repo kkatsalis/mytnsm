@@ -11,6 +11,7 @@ import java.util.TimerTask;
 
 import Controller.Configuration;
 import Controller.Controller;
+import Controller.SlotChangedListener;
 import Enumerators.EGeneratorType;
 import Enumerators.ESlotDurationMetric;
 import Statistics.WebRequestStatsSlot;
@@ -25,10 +26,11 @@ public class ClientsSimulator extends Thread{
 	int services_number;
 	int[][][][][] running_allocations; // [s][n][p][v][s]
 	Client[][][] clients; // [p][s][c]
-	ClientRequest[][][] clients_thread; // [p][s][c]
+	ClientRequests[][][] clients_thread; // [p][s][c]
 	WebRequestStatsSlot[] _webRequestStatsSlot;
 	Controller controller;
 	int requests[][][];
+	List<SlotChangedListener> slot_changed_listeners;
 	
 	public ClientsSimulator(Configuration config, Controller controller) {
 		this.config = config;
@@ -38,15 +40,18 @@ public class ClientsSimulator extends Thread{
 		this.clients_number = clients_config.getClients_number();
 		this.services_number = config.getServices_number();
 		this.clients = new Client[providers_number][services_number][clients_number];
-		this.clients_thread = new ClientRequest[providers_number][services_number][clients_number];
-		requests = new int[config.getProviders_number()][config.getServices_number()][clients_config.getClients_number()];
-
+		this.clients_thread = new ClientRequests[providers_number][services_number][clients_number];
+		this.requests = new int[config.getProviders_number()][config.getServices_number()][clients_config.getClients_number()];
+		slot_changed_listeners=controller.getSlot_changed_listeners();
+	
+		
 		for (int p = 0; p < providers_number; p++) {
 			for (int s = 0; s < services_number; s++) {
 				for (int c = 0; c < clients_number; c++) {
 					clients[p][s][c] = new Client(p, s, c, config, clients_config);
-					clients_thread[p][s][c]=new ClientRequest(controller, config, clients_config,
+					clients_thread[p][s][c]=new ClientRequests(controller, config, clients_config,
 							clients, p, s, c,requests);
+					slot_changed_listeners.add(clients_thread[p][s][c]);
 				}
 			}
 		}
@@ -69,7 +74,7 @@ public class ClientsSimulator extends Thread{
 	}
 }
 
-class ClientRequest extends Thread {
+class ClientRequests extends Thread implements SlotChangedListener{
 
 	int provider_id;
 	int service_id;
@@ -80,8 +85,12 @@ class ClientRequest extends Thread {
 	Controller controller;
 	FakeServers fake_servers;
 	int requests[][][];
+	int running_slot;
+	List<Double>[] response_times;
+	double average=0;
 	
-	public ClientRequest(Controller controller, Configuration config, ClientsConfiguration clients_config,
+	@SuppressWarnings("unchecked")
+	public ClientRequests(Controller controller, Configuration config, ClientsConfiguration clients_config,
 			Client[][][] clients, int providerID, int serviceID, int clientID,int requests[][][]) {
 		this.requests=requests;
 		this.provider_id = providerID;
@@ -92,30 +101,33 @@ class ClientRequest extends Thread {
 		this.clients_config = clients_config;
 		this.controller = controller;
 		this.fake_servers = new FakeServers(config, clients_config);
+		this.running_slot=0;
+		this.response_times=new ArrayList[config.getSlots()];
+		for (int i = 0; i < config.getSlots(); i++) {
+			response_times[i]=new ArrayList<Double>();
+		}
 	}
+	
+	@Override
+    public void slotChanged(int new_slot) {
+        running_slot=new_slot;
+        
+    	average= calculateAverage(response_times[running_slot-1]);
+		sendClientStatsToDB(controller, running_slot-1, provider_id, service_id, client_id, requests[provider_id][service_id][client_id],
+		average);
+		
+		response_times[running_slot-1].clear();
+
+    }
 
 	@SuppressWarnings("static-access")
 	@Override
 	public void run() {
 
-
 		int vms_number = 0;
 		double response_time = 0;
-		int client_slot=0;
-		List<Double> response_times=new ArrayList<Double>();
-		double average=0;
-		while(controller.getSlot()<config.getSlots()){
-			
-			if( client_slot<controller.getSlot()){
-				client_slot=controller.getSlot();
-				
-				average= calculateAverage(response_times);
-				sendClientStatsToDB(controller, provider_id, service_id, client_id, requests[provider_id][service_id][client_id],
-				average);
-				
-				response_times.clear();
-				
-			}
+		
+		while(running_slot<config.getSlots()){
 			
 			int[][][][] running_allocations = controller.getRunning_allocations();
 			
@@ -135,10 +147,8 @@ class ClientRequest extends Thread {
 			} else
 				response_time = fake_servers.cloudServerResponseTime(service_id);
 
-//			if(provider_id==1)
-//				System.out.println(response_time);
 			
-			response_times.add(response_time);
+			response_times[running_slot].add(response_time);
 			
 			int duration = config.getSlotDuration();
 
@@ -204,13 +214,13 @@ class ClientRequest extends Thread {
 	}
 
 
-	public void sendClientStatsToDB(Controller  controller, int provider_id, int service_id, int client_id, int request_index,
+	public void sendClientStatsToDB(Controller  controller,int slot, int provider_id, int service_id, int client_id, int request_index,
 			double response_time) {
 
 		String sql = "INSERT INTO CLIENTS(sim_id,run_id,slot,provider_id,service_id,client_id,request_index,response_time) VALUES(?,?,?,?,?,?,?,?)";
 		int sim_id=config.getSimulationID();
 		int run_id=config.getRunID();
-		int slot=controller.getSlot();
+
 		
 		try {
 			

@@ -252,6 +252,7 @@ public class Utilities {
 	{
 
 		int requests = 0;
+		System.out.println("update request pattern called- slot:"+slot+"-p:"+p+"-s:"+s);
 
 		String qr = "SELECT request_index FROM CLIENTS WHERE PROVIDER_ID="+p
 				+" AND service_id="+s+" AND Slot="+slot;

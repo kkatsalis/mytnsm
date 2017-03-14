@@ -16,6 +16,7 @@ import Enumerators.EAlgorithms;
  */
 public class EdgeControllerApplication {
 
+	
 	public static void main(String[] args) {
 
 		Simulator simulator;
@@ -23,6 +24,7 @@ public class EdgeControllerApplication {
 		int runID;
 		String algorithm;
 
+		
 		simulator=new Simulator();
 
 		if(args.length>0){

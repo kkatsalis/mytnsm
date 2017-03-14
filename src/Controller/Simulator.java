@@ -341,6 +341,7 @@ public class Simulator {
 					experimentStop = System.currentTimeMillis();
 					controllerTimer.cancel();
 					_controller.disConnectDB();
+					System.out.println("Simulation Finished!");
 					System.exit(0);
 				}
 			} catch (IOException ex) {

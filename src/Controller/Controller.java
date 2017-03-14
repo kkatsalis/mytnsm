@@ -66,6 +66,9 @@ public class Controller {
 	int[][][] total_vms_satisfied;
 	int slot = 0;
 	Connection conn;
+	List<SlotChangedListener> slot_changed_listeners ;
+	
+	
 	Controller(Configuration config, Host[] hosts, Slot[] slots, Provider[] _provider) {
 
 		this._config = config;
@@ -83,6 +86,8 @@ public class Controller {
 		this.SIMULATION_MODE=config.getSimulation_mode();
 		this.running_allocations = new int[hosts_number][providers_number][vm_types_number][services_number];
 		this.generic_scheduler = new GenericScheduler(config, this);
+		this.slot_changed_listeners = new ArrayList<>();
+		
 		initializeController();
 		_cplexData.initializeWebRequestMatrix(_webRequestPattern);
 
@@ -123,6 +128,11 @@ public class Controller {
 	void Run(int slot) throws IOException {
 
 		this.slot = slot;
+		
+		for (SlotChangedListener hl : slot_changed_listeners){
+	            hl.slotChanged(slot);
+	    }
+		
 		System.out.println("******* Slot:" + slot + " Controller Run *******");
 		updateServiceRequestPattern(slot);
 
@@ -234,9 +244,9 @@ public class Controller {
 					
 						for (int p = 0; p < this.providers_number; p++) {
 							for (int s = 0; s < this.services_number; s++) {
-								requestsMade += Utilities.getRequestsMadefromDB(conn,slot, p, s);
+								requestsMade = Utilities.getRequestsMadefromDB(conn,slot-1, p, s);
 								_webRequestPattern[p][s] = requestsMade / slot;
-								System.out.println("slot"+slot+"_p"+p+"req: "+_webRequestPattern[p][s]);
+							//	System.out.println("slot"+slot+"_p"+p+"req: "+_webRequestPattern[p][s]);
 
 							}
 
@@ -570,6 +580,12 @@ public class Controller {
 			System.out.println(e.getMessage());
 		} 
 	}
+
+	public List<SlotChangedListener> getSlot_changed_listeners() {
+		return slot_changed_listeners;
+	}
+
+
 
 
 

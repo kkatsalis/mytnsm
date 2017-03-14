@@ -219,7 +219,7 @@ public class ABServiceClient implements Runnable {
 		this.request_rate = request_rate;
 		this.requests = requests;
 		this.concurrency = concurrency;
-		this.url = url;
+		this.url = "http://"+url+"/";
 	}
 		
 	public void run() 

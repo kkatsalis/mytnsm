@@ -97,7 +97,7 @@ public class CloudServiceClient {
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 		///////////////////////////// REDIS ////////////////////////////////////////////////////////
 
-		String redTable = "CREATE TABLE REDISSTATS " +
+		String redTable = "CREATE TABLE REDISSTATS " +  
 				"(ts TIMESTAMP not NULL, " +
 				" CLIENT_ID INTEGER not NULL, " + 
 				" PROVIDER INTEGER not NULL, " +
@@ -134,32 +134,45 @@ public class CloudServiceClient {
 				concurrent = (int)(multiplier*concurrentRatio*initialRate);
 			}
 			
-//			
-//			for (int j=0;j<providersNum;j++) {
-//				String[]  IPs = getServiceIPs("apachep"+j, jujuURL+"apachep"+j);
-//				ABServiceClient[] abs = new ABServiceClient[IPs.length];
-//				for (int i=0;i<IPs.length;i++) 
-//					abs[i] = new ABServiceClient(1, 1, rate/IPs.length, requests/IPs.length, concurrent/IPs.length, IPs[i]);
-//
-//				IPs = getServiceIPs("redisp"+j, jujuURL);
-//				RedisServiceClient[] redises = new RedisServiceClient[IPs.length];
-//				for (int i=0;i<IPs.length;i++) 
-//					redises[i] = new RedisServiceClient(1, 1, rate/IPs.length, requests/IPs.length, concurrent/IPs.length, IPs[i]);
-//			}
+			ABServiceClient[] abs = null;
+			RedisServiceClient[] redises = null;
+			String[]  IPs = null;
+			for (int j=0;j<providersNum;j++) {
+				IPs = getServiceIPs("apachep"+j, jujuURL);
+				abs = new ABServiceClient[IPs.length];
+				for (int i=0;i<IPs.length;i++) 
+					abs[i] = new ABServiceClient(1, 1, rate/IPs.length, requests/IPs.length, concurrent/IPs.length, IPs[i]);
+
+				IPs = getServiceIPs("redisp"+j, jujuURL);
+				redises = new RedisServiceClient[IPs.length];
+				for (int i=0;i<IPs.length;i++) 
+					redises[i] = new RedisServiceClient(1, 1, rate/IPs.length, requests/IPs.length, concurrent/IPs.length, IPs[i]);
+			}
+			
+			
+			if (slot == 0) {
+				abs[0].createTable(abTable);
+				redises[0].createTable(redTable);
+			}
+			
+			for (int j=0;j<providersNum;j++) {
+				new ClientThread(rate/IPs.length, concurrent/IPs.length, slotDuration-1000, abs[j]).start();
+				new ClientThread(rate/IPs.length, concurrent/IPs.length, slotDuration-1000, redises[j]).start();
+			}
 			 
 			// Currently we have only 2 services deployed at 2 IPs, the total requests have to be split to the total number of deployed VMs+1 per service
-			ABServiceClient ab = new ABServiceClient(1, 1, rate, requests, concurrent, "http://10.95.196.78:80/");
-			RedisServiceClient red = new RedisServiceClient(1, 1, rate, requests, concurrent, "10.95.196.143");
+//			ABServiceClient ab = new ABServiceClient(1, 1, rate, requests, concurrent, "http://10.95.196.78:80/");
+//		RedisServiceClient red = new RedisServiceClient(1, 1, rate, requests, concurrent, "10.95.196.143");
 
-			if (slot == 0)
-			{
-				ab.createTable(abTable);
-				red.createTable(redTable);
-			}
-			ClientThread abthread = new ClientThread(rate, concurrent, slotDuration-1000, ab);
-			ClientThread redthread = new ClientThread(rate, concurrent, slotDuration-1000, red);
-			abthread.start();
-			redthread.start();
+//			if (slot == 0)
+//			{
+//				ab.createTable(abTable);
+//				red.createTable(redTable);
+//			}
+//			ClientThread abthread = new ClientThread(rate, concurrent, slotDuration-1000, ab);
+//			ClientThread redthread = new ClientThread(rate, concurrent, slotDuration-1000, red);
+//			abthread.start();
+//			redthread.start();
 
 			try {
 				Thread.sleep(slotDuration);
@@ -181,7 +194,7 @@ public class CloudServiceClient {
 		try{
 
 			HttpClient client = HttpClients.createDefault();
-			HttpGet request = new HttpGet(serviceURL+"?name="+serviceName);
+			HttpGet request = new HttpGet(serviceURL+serviceName);
 			HttpResponse response = client.execute(request);
 
 			String responseString = new BasicResponseHandler().handleResponse(response);
