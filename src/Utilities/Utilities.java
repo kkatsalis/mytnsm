@@ -56,7 +56,7 @@ public class Utilities {
 
 	public static void updateActivationStats(Connection conn,int slot, Configuration config,int[][][][] activation_matrix, int[][][] total_vms_allocated, double benefit) {
 
-		String sql = "INSERT INTO ACTIVATION(sim_id, run_id,slot,algorithm,host_id,provider_id,vm_type_id,service_id,vms_allocated,total_vms_allocated,benefit) VALUES(?,?,?,?,?,?,?,?,?,?,?)";
+		String sql = "INSERT INTO ACTIVATION(sim_id, run_id,slot,algorithm,host_id,provider_id,vm_type_id,service_id,vms_allocated,total_vms_allocated,all_vm_types_activated_total,benefit) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)";
 		String algorithm=config.getAlgorithm();
 		int sim_id=config.getSimulationID();
 		int run_id=config.getRunID();
@@ -65,14 +65,22 @@ public class Utilities {
 		int vm_types_number = config.getVm_types_number();
 		int services_number = config.getServices_number();
 		int vms_number=0;
-		int total_vms_number=0;
+		int vms_activated_total=0;
+		int all_vm_types_activated_total=0;
 
 		for (int n = 0; n < hosts_number; n++) {
 			for (int p = 0; p < providers_number; p++) {
+
+				for (int v = 0; v < vm_types_number; v++) {
+					for (int s = 0; s < services_number; s++) {
+
+						all_vm_types_activated_total+=total_vms_allocated[p][v][s];
+					}
+				}
 				for (int v = 0; v < vm_types_number; v++) {
 					for (int s = 0; s < services_number; s++) {
 						vms_number = activation_matrix[n][p][v][s];
-						total_vms_number=total_vms_allocated[p][v][s];
+						vms_activated_total=total_vms_allocated[p][v][s];
 
 						try{
 							PreparedStatement pstmt = conn.prepareStatement(sql); 
@@ -85,8 +93,9 @@ public class Utilities {
 							pstmt.setInt(7, v);
 							pstmt.setInt(8, s);
 							pstmt.setInt(9, vms_number);
-							pstmt.setDouble(10,total_vms_number);
-							pstmt.setDouble(11, benefit);
+							pstmt.setDouble(10,vms_activated_total);
+							pstmt.setDouble(11,all_vm_types_activated_total);
+							pstmt.setDouble(12, benefit);
 
 
 							pstmt.executeUpdate();
@@ -101,7 +110,7 @@ public class Utilities {
 
 	public static void updateVmRequestStats2Db(Connection conn,int slot, Configuration config,int[][][] vmRequestMatrix,int[][][] total_requests) {	
 
-		String sql = "INSERT INTO VMS_REQUESTED(sim_id,run_id,slot, provider_id,vm_type_id,service_id,vms_requested,total_vms_requested) VALUES(?,?,?,?,?,?,?,?)";
+		String sql = "INSERT INTO REQUESTS(sim_id,run_id,slot, provider_id,vm_type_id,service_id,vms_requested,total_vms_requested,all_vms_requested_total) VALUES(?,?,?,?,?,?,?,?,?)";
 		int sim_id=config.getSimulationID();
 		int run_id=config.getRunID();
 		int providers_number = config.getProviders_number();
@@ -109,7 +118,18 @@ public class Utilities {
 		int services_number = config.getServices_number();
 		int vms=0;
 		int total_vms=0;
+		int all_vms_requested_total=0;
+
+
 		for (int p = 0; p < providers_number; p++) {
+
+			for (int v = 0; v < vm_types_number; v++) {
+				for (int s = 0; s < services_number; s++) {
+					all_vms_requested_total+=total_requests[p][v][s];
+				}
+
+			}
+
 			for (int v = 0; v < vm_types_number; v++) {
 				for (int s = 0; s < services_number; s++) {
 					vms=vmRequestMatrix[p][v][s];
@@ -124,6 +144,7 @@ public class Utilities {
 						pstmt.setInt(6, s);
 						pstmt.setInt(7, vms);
 						pstmt.setInt(8, total_vms);
+						pstmt.setInt(9, all_vms_requested_total);
 						pstmt.executeUpdate();
 					} catch (SQLException e) {
 						System.out.println(e.getMessage());
@@ -256,15 +277,15 @@ public class Utilities {
 
 		String qr = "SELECT request_index FROM CLIENTS WHERE PROVIDER_ID="+p
 				+" AND service_id="+s+" AND Slot="+slot;
-		
+
 		try {				
 			ResultSet rs = executeQR(qr,conn);
-			 
+
 			while (rs.next()) {
 				requests=Integer.valueOf(rs.getString("request_index"));
 				System.out.println("slot"+slot+"_p"+p+"total-req: "+requests);
 			}
-			
+
 
 		}catch(NoSuchElementException e) {
 			e.printStackTrace();

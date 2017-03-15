@@ -182,20 +182,20 @@ public class Simulator {
 		int lifetime = calculateServiceLifeTime(providerID, serviceID);
 		int end_slot=checkIfServiceIsAlive(providerID, serviceID, currentSlot);
 
-		if(end_slot!=-1){
-			slots_diff=end_slot-currentSlot;
-			currentSlot=end_slot; //postpone the request until is the previous is finished
-		}
+//		if(end_slot!=-1){
+//			slots_diff=end_slot-currentSlot;
+//			currentSlot=end_slot; //postpone the request until is the previous is finished
+//		}
 		
 		
 		if (lifetime < 1)
 			lifetime = 2;
 		
-		if(slots_diff>0)
-			if (lifetime>slots_diff)
-				lifetime=lifetime-slots_diff;
-			else
-				lifetime=1;
+//		if(slots_diff>0)
+//			if (lifetime>slots_diff)
+//				lifetime=lifetime-slots_diff;
+//			else
+//				lifetime=1;
 		
 		slot2RemoveService = currentSlot + lifetime;
 

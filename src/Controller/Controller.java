@@ -245,7 +245,7 @@ public class Controller {
 						for (int p = 0; p < this.providers_number; p++) {
 							for (int s = 0; s < this.services_number; s++) {
 								requestsMade = Utilities.getRequestsMadefromDB(conn,slot-1, p, s);
-								_webRequestPattern[p][s] = requestsMade / slot;
+								_webRequestPattern[p][s] = requestsMade;
 							//	System.out.println("slot"+slot+"_p"+p+"req: "+_webRequestPattern[p][s]);
 
 							}
