@@ -30,7 +30,6 @@ public class ServiceRequest {
 	List<String[][]> units; 
 
 	
-	@SuppressWarnings("unchecked")
 	public ServiceRequest(Configuration config, int providerID, int serviceID, int lifetime) {
 
 		this.providerID = providerID;

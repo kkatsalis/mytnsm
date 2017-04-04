@@ -3,12 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-import java.util.ArrayList;
-import java.util.List;
-
-import Clients.ClientsSimulator;
+import Controller.Configuration;
 import Controller.Simulator;
-import Enumerators.EAlgorithms;
+import LocalClients.ClientsSimulator;
 
 /**
  *
@@ -24,8 +21,7 @@ public class EdgeControllerApplication {
 		int runID;
 		String algorithm;
 
-		
-		simulator=new Simulator();
+		Configuration config= new Configuration();
 
 		if(args.length>0){
 
@@ -33,11 +29,12 @@ public class EdgeControllerApplication {
 			simulationID=Integer.valueOf(args[1].toString());
 			runID=Integer.valueOf(args[2].toString());
 		
-			simulator.get_config().setSimulationID(simulationID);
-			simulator.get_config().setAlgorithm(algorithm);
-			simulator.get_config().setRunID(runID);
+			config.setSimulationID(simulationID);
+			config.setAlgorithm(algorithm);
+			config.setRunID(runID);
 		}			
 		
+		simulator=new Simulator(config);
 		simulator.StartExperiment();
 	
 		if(simulator.get_config().getSimulation_mode()){

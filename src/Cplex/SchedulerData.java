@@ -5,8 +5,6 @@
 */
 package Cplex;
 
-import java.util.Arrays;
-
 import Controller.Configuration;
 
 /**

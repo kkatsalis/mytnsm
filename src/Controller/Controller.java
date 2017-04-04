@@ -1,4 +1,5 @@
 /*
+
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
@@ -6,14 +7,12 @@
 package Controller;
 
 import Cplex.CplexResponse;
-import Enumerators.ESlotDurationMetric;
 import Utilities.WebUtilities;
 import Statistics.WebRequestStatsSlot;
 import Cplex.Scheduler;
 import Cplex.SchedulerData;
 import Enumerators.EAlgorithms;
 import Enumerators.EStatsUpdateMethod;
-import Enumerators.UpdateType;
 import Utilities.Utilities;
 import java.io.IOException;
 import java.sql.Connection;
@@ -21,10 +20,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Timer;
-import java.util.TimerTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -43,14 +40,14 @@ public class Controller {
 	WebUtilities _webUtilities;
 
 	int _currentInstance = 0;
-	int vmIDs = 0;
+	int _vmIDs = 0;
 
 	SchedulerData _cplexData;
-	Scheduler scheduler;
-	GenericScheduler generic_scheduler;
+	Scheduler _scheduler;
+	GenericScheduler _generic_scheduler;
 	WebRequestStatsSlot[][][] _webRequestSlotStats;
 
-	int[][][][] running_allocations; // [n][p][v][s]
+	int[][][][] _running_allocations; // [n][p][v][s]
 
 	int[][] _webRequestPattern; // [p][s]: p=provider, s=service
 
@@ -67,8 +64,10 @@ public class Controller {
 	int slot = 0;
 	Connection conn;
 	List<SlotChangedListener> slot_changed_listeners ;
-	
-	
+	double[] vm_price;
+	double[][] pen;
+
+
 	Controller(Configuration config, Host[] hosts, Slot[] slots, Provider[] _provider) {
 
 		this._config = config;
@@ -84,10 +83,10 @@ public class Controller {
 		this._cplexData = new SchedulerData(config);
 		this._providers = _provider;
 		this.SIMULATION_MODE=config.getSimulation_mode();
-		this.running_allocations = new int[hosts_number][providers_number][vm_types_number][services_number];
-		this.generic_scheduler = new GenericScheduler(config, this);
+		this._running_allocations = new int[hosts_number][providers_number][vm_types_number][services_number];
+		this._generic_scheduler = new GenericScheduler(config, this);
 		this.slot_changed_listeners = new ArrayList<>();
-		
+
 		initializeController();
 		_cplexData.initializeWebRequestMatrix(_webRequestPattern);
 
@@ -122,95 +121,109 @@ public class Controller {
 				}
 			}
 		}
+
+
+		vm_price= new double[vm_types_number];
+		double priceBase = _config.getPriceBase();
+		for (int v=0;v < vm_types_number;v++){
+			vm_price[v] = (v+1)*priceBase;
+
+		}
+
+		pen = new double[providers_number][services_number];
+		for (int j=0;j<providers_number;j++)
+			for (int s=0;s<services_number;s++)
+				pen[j][s] = _config.getPenalty()[j][s];
+
 	}
 
-	@SuppressWarnings("unused")
 	void Run(int slot) throws IOException {
 
-		this.slot = slot;
-		
-		for (SlotChangedListener hl : slot_changed_listeners){
-	            hl.slotChanged(slot);
-	    }
-		
-		System.out.println("******* Slot:" + slot + " Controller Run *******");
-		updateServiceRequestPattern(slot);
-
-		scheduler = new Scheduler(_config);
-
-		// if (false)
-		// startNodesStatsTimer(slot); // for Statistics updates
-
 		try {
+			this.slot = slot;
 
-			// Load VM Deactivation Matrix
+			for (SlotChangedListener hl : slot_changed_listeners){
+				hl.slotChanged(slot); // informs the clients of teh slot change
+			}
+
+			System.out.println();
+			System.out.println("******* Slot:" + slot + " Controller Run *******");
+			updateServiceRequestPattern(slot);
+
+			_scheduler = new Scheduler(_config);
+
+
+			System.out.println("Previous RUNNING Matrix:" + Arrays.deepToString(_running_allocations));
 			int[][][][] vms2DeleteMatrix = prepareVmDeleteMatrix(slot);
-			System.out.println("DELETE Matrix:" + Arrays.deepToString(vms2DeleteMatrix));
-			reduceRunningAllocation(vms2DeleteMatrix);
+
 			if (SIMULATION_MODE==false) {
 				destroyServices(slot);
 				Thread.sleep(10000);
 			}	
 
-			// ----------- Load VM Request Lists
+			// Load VM Request Lists
 			for (int p = 0; p < this.providers_number; p++) {
 				for (ServiceRequest serviceRequest : _slots[slot].getServiceRequests2Activate()[p]) {
 					addVmRequestsPerService(serviceRequest, slot);
 				}
 			}
 			int[][][] vmRequestMatrix = loadVMRequestMatrix(slot);
-			Utilities.updateVmRequestStats2Db(conn,slot, _config, vmRequestMatrix, total_vms_requests);
-
-			System.out.println("REQUESTS Matrix:" + Arrays.deepToString(vmRequestMatrix));
 
 
 			// Update WebRequest Pattern
 			// int[][] requestPattern=Utilities.findRequestPattern(_config);
 
 			// Update CPLEX data Parameters
-			_cplexData.updateParameters(_webRequestPattern, vmRequestMatrix, vms2DeleteMatrix);
+
 
 			// Run CPLEX
+
 			int[][][][] activationMatrix = new int[hosts_number][providers_number][vm_types_number][services_number];
+			double net_benefit=0;
 
 			if (_slots[slot].getServiceRequests2Activate().length > 0) {
 
-				if ((_config.getAlgorithm()).equals(EAlgorithms.FirstFit.toString()))
-					activationMatrix = generic_scheduler.FirstFit(vmRequestMatrix);
+				if ((_config.getAlgorithm()).equals(EAlgorithms.FirstFitPRR.toString())){
+					activationMatrix = _generic_scheduler.FirstFitPRR(vmRequestMatrix);
+					net_benefit=calculateBenefit(activationMatrix);
+				}
+				else if ((_config.getAlgorithm()).equals(EAlgorithms.FirstFitSRR.toString())){
+					activationMatrix = _generic_scheduler.FirstFitSRR(vmRequestMatrix);
+					net_benefit=calculateBenefit(activationMatrix);
+				}
+				else if ((_config.getAlgorithm()).equals(EAlgorithms.Lyapunov.toString())){
+					_cplexData.updateParameters(_webRequestPattern, vmRequestMatrix, vms2DeleteMatrix);
+					activationMatrix = _scheduler.RunLyapunov(_cplexData);
+					_scheduler.updateData(_cplexData, activationMatrix);
+					CplexResponse cplexResponse = updateLyapunovPenaltyAndUtility(_cplexData, activationMatrix);
+					net_benefit = cplexResponse.getNetBenefit();
 
-				else if ((_config.getAlgorithm()).equals(EAlgorithms.Lyapunov.toString()))
-					activationMatrix = scheduler.RunLyapunov(_cplexData);
+					for (int n = 0; n < hosts_number; n++) {
+						for (int p = 0; p < providers_number; p++) {
+							for (int v = 0; v < vm_types_number; v++) {
+								for (int s = 0; s < services_number; s++) {
+									_running_allocations[n][p][v][s]+=activationMatrix[n][p][v][s];
+								}
+							}
+						}
+					}
+				}
 				else
 					System.out.print("No scheduling algorithm is defined");
 
 			}
-			// In FF running allocations are updated internally
-			if ((_config.getAlgorithm()).equals(EAlgorithms.Lyapunov.toString()))
+
+			// Create Real VMs 
+			if (SIMULATION_MODE==false) 
+				createAllServices(slot, activationMatrix);
+
+
+
+			//  Update Running Allocations and Total Allocations Object
 			for (int n = 0; n < hosts_number; n++) {
 				for (int p = 0; p < providers_number; p++) {
 					for (int v = 0; v < vm_types_number; v++) {
 						for (int s = 0; s < services_number; s++) {
-							running_allocations[n][p][v][s]+=activationMatrix[n][p][v][s];
-						}
-					}
-				}
-			}
-
-
-
-			System.out.println("ACTIVATION Matrix:" + Arrays.deepToString(activationMatrix));
-
-			scheduler.updateData(_cplexData, activationMatrix);
-			CplexResponse cplexResponse = updatePenaltyAndUtility(_cplexData, activationMatrix);
-
-			// ----------- Update Statistics Object
-			double net_benefit = cplexResponse.getNetBenefit();
-			System.out.println("NET_BENEFIT: " + net_benefit);
-
-			for (int n = 0; n < hosts_number ; n++) {
-				for (int p = 0; p < this.providers_number; p++) {
-					for (int v = 0; v < this.vm_types_number; v++) {
-						for (int s = 0; s < this.services_number; s++) {
 							total_vms_satisfied[p][v][s]+=activationMatrix[n][p][v][s];
 						}
 					}
@@ -218,10 +231,19 @@ public class Controller {
 			}
 
 
-			Utilities.updateActivationStats(conn,slot, _config, activationMatrix,total_vms_satisfied,net_benefit);
-			// ----------- Create VMs Actual)
-			if (SIMULATION_MODE==false) 
-				createAllServices(slot, activationMatrix);
+
+			//  Update STATISTICS 
+			System.out.println("DELETE Matrix:" + Arrays.deepToString(vms2DeleteMatrix));
+			System.out.println("REQUESTS Matrix:" + Arrays.deepToString(vmRequestMatrix));
+
+			System.out.println("ACTIVATION Matrix:" + Arrays.deepToString(activationMatrix));
+			System.out.println("RUNNING Matrix:" + Arrays.deepToString(_running_allocations));
+
+			System.out.println("NET_BENEFIT: " + net_benefit);
+			Utilities.updateVmRequestStats2Db(conn,slot, _config, vmRequestMatrix, total_vms_requests);
+			Utilities.updateActivationStats(conn,slot, _config, activationMatrix);
+			Utilities.updateTotalStats2Db(conn, slot, _config, total_vms_requests, total_vms_satisfied, net_benefit);
+
 
 		} catch (Exception ex) {
 			Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
@@ -231,26 +253,22 @@ public class Controller {
 
 	public void updateServiceRequestPattern(int slot) {
 
-		int slots_window = _config.getSlots_window();
-		int index = 0;
 		int requestsMade = 0;
 
 		try {
-
+			
 			if (slot > 0) {
 				if (EStatsUpdateMethod.simple_average.toString().equals(_config.getWeb_stats_update_method())) {
 
-					index = _slots.length - slots_window;
-					
-						for (int p = 0; p < this.providers_number; p++) {
-							for (int s = 0; s < this.services_number; s++) {
-								requestsMade = Utilities.getRequestsMadefromDB(conn,slot-1, p, s);
-								_webRequestPattern[p][s] = requestsMade;
+					for (int p = 0; p < this.providers_number; p++) {
+						for (int s = 0; s < this.services_number; s++) {
+							requestsMade = Utilities.getRequestsMadefromDB(conn,slot-1, p, s);
+							_webRequestPattern[p][s] += requestsMade;
 							//	System.out.println("slot"+slot+"_p"+p+"req: "+_webRequestPattern[p][s]);
 
-							}
-
 						}
+
+					}
 
 				} else if (EStatsUpdateMethod.cumulative_moving_average.toString()
 						.equals(_config.getWeb_stats_update_method())) {
@@ -283,7 +301,9 @@ public class Controller {
 
 		// Solves the VM mapping problem
 		int[] _vms = null;
-		if ((_config.getAlgorithm()).equals(EAlgorithms.FirstFit.toString()))
+		if ((_config.getAlgorithm()).equals(EAlgorithms.FirstFitPRR.toString()))
+			_vms = _cplexData.fk(_webRequestPattern,providerID, serviceID);
+		else if ((_config.getAlgorithm()).equals(EAlgorithms.FirstFitSRR.toString()))
 			_vms = _cplexData.fk(_webRequestPattern,providerID, serviceID);
 		else if ((_config.getAlgorithm()).equals(EAlgorithms.Lyapunov.toString()))
 			_vms=_cplexData.f(_cplexData,providerID, serviceID);
@@ -313,7 +333,6 @@ public class Controller {
 		}
 	}
 
-	@SuppressWarnings("unused")
 	private void destroyServices(int slot) throws InterruptedException {
 
 		DestroyService deleter = new DestroyService(_slots[slot]);
@@ -323,7 +342,7 @@ public class Controller {
 
 	}
 
-	private CplexResponse updatePenaltyAndUtility(SchedulerData data, int[][][][] activationMatrix) {
+	private CplexResponse updateLyapunovPenaltyAndUtility(SchedulerData data, int[][][][] activationMatrix) {
 
 		double netBenefit = 0;
 		double penalty = 0;
@@ -356,6 +375,41 @@ public class Controller {
 		CplexResponse response = new CplexResponse(activationMatrix, netBenefit, utility, penalty);
 
 		return response;
+	}
+
+	private double calculateBenefit(int[][][][] activationMatrix) {
+
+		double netBenefit = 0;
+		double penalty = 0;
+		double utility = 0;
+
+
+
+		for (int i = 0; i < hosts_number; i++)
+			for (int j = 0; j < providers_number ; j++)
+				for (int s = 0; s < services_number; s++)
+					for (int v = 0; v < vm_types_number; v++)
+						utility += activationMatrix[i][j][v][s] * vm_price[v];
+
+		penalty = 0; // Cost
+		double xi;
+		for (int p = 0; p < providers_number; p++) {
+
+			for (int s = 0; s < services_number; s++) {
+				double temp = 0;
+				for (int v = 0; v < vm_types_number; v++)
+					for (int i = 0; i < hosts_number; i++){
+						xi=_config.getXi()[v][s];
+						temp += _running_allocations[i][p][v][s] * xi;
+					}
+				penalty += Math.max((_webRequestPattern[p][s] - temp), 0) * pen[p][s];
+			}
+		}
+
+		netBenefit = utility - penalty;
+
+
+		return netBenefit;
 	}
 
 	private int[][][] loadVMRequestMatrix(int slot) {
@@ -392,14 +446,29 @@ public class Controller {
 					}
 
 		int s = -1;
-
+		@SuppressWarnings("unchecked")
+		List<Integer>[] checked=new ArrayList[providers_number];
+		
+		
+		
 		for (int p = 0; p < providers_number; p++) {
+			checked[p]=new ArrayList<Integer>();
 			for (ServiceRequest request : _slots[slot].getServiceRequests2Remove()[p]) {
+				s = request.getServiceID();
+				if(checked[p].contains(s)){
+					System.out.println("@@@ ERROR-s already checked");
+					System.exit(0);
+				}
+				else 
+					checked[p].add(s);
 
 				for (int n = 0; n < hosts_number; n++) {
 					for (int v = 0; v < vm_types_number; v++) {
-						s = request.getServiceID();
-						vms2DeleteMatrix[n][p][v][s] = running_allocations[n][p][v][s];
+
+						vms2DeleteMatrix[n][p][v][s] = _running_allocations[n][p][v][s];
+
+						System.out.println("delete-n:"+n+"-p:"+p+"-v:"+v+"-s"+s+"machines:"+vms2DeleteMatrix[n][p][v][s]);
+						_running_allocations[n][p][v][s]=0;
 					}
 				}
 			}
@@ -408,20 +477,7 @@ public class Controller {
 		return vms2DeleteMatrix;
 	}
 
-	private void reduceRunningAllocation(int[][][][] vmsMatrix) {
 
-		int index = 0;
-		for (int n = 0; n < hosts_number; n++)
-			for (int p = 0; p < providers_number; p++)
-				for (int v = 0; v < vm_types_number; v++)
-					for (int s = 0; s < services_number; s++) {
-						index = 0;
-						while (index < vmsMatrix[n][p][v][s]) {
-							running_allocations[n][p][v][s]--;
-							index++;
-						}
-					}
-	}
 
 	class DestroyService implements Runnable {
 
@@ -560,7 +616,7 @@ public class Controller {
 	}
 
 	public int[][][][] getRunning_allocations() {
-		return running_allocations;
+		return _running_allocations;
 	}
 
 	public int getSlot() {
@@ -570,7 +626,7 @@ public class Controller {
 	public Connection getConn() {
 		return conn;
 	}
-	
+
 	public void disConnectDB() {
 		try {
 			if (conn != null)

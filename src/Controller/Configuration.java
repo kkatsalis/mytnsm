@@ -8,12 +8,8 @@ package Controller;
 import Enumerators.EGeneratorType;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.Properties;
-import java.util.Queue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -80,7 +76,9 @@ public class Configuration {
 	double[][] xi; // [v][s] vm v, service s
 
 	// ========= PROVIDERS ==========
+	@SuppressWarnings("rawtypes")
 	Hashtable[][] arrivals_generator;
+	@SuppressWarnings("rawtypes")
 	Hashtable[][] lifetime_generator;
 
 	public Configuration() {
@@ -119,7 +117,7 @@ public class Configuration {
 		for (int p = 0; p < providers_number; p++) {
 
 			for (int s = 0; s < services_number; s++) {
-				arrivals_generator[p][s]=new Hashtable();
+				arrivals_generator[p][s]=new Hashtable<Object, Object>();
 
 				// Estimated requests
 				parameter = "provider" + p + "_service" + s + "_estimatedRequests";
@@ -132,7 +130,7 @@ public class Configuration {
 				arrivals_generator[p][s].put("arrivals_type", arrival_rate_type);
 
 				// Exponential
-				if (EGeneratorType.Exponential.toString().equals(arrival_rate_type)) {
+				if (EGeneratorType.Poisson.toString().equals(arrival_rate_type)) {
 
 					parameter = "provider" + p + "_service" + s + "_arrivals_lamda";
 					double_value = Double.valueOf( property.getProperty(parameter));
@@ -193,7 +191,7 @@ public class Configuration {
 		for (int p = 0; p < providers_number; p++) {
 
 			for (int s = 0; s < services_number; s++) {
-				lifetime_generator [p][s]=new Hashtable();
+				lifetime_generator [p][s]=new Hashtable<Object, Object>();
 
 
 				//arrivals type
@@ -295,7 +293,7 @@ public class Configuration {
 
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings({ "unchecked" })
 	private void loadSimulationProperties() {
 
 		Properties property = new Properties();
@@ -329,7 +327,7 @@ public class Configuration {
 		remote_machine_config = new Hashtable[remote_machines_number];
 
 		for (int i = 0; i < remote_machines_number; i++) {
-			remote_machine_config[i]=new Hashtable();
+			remote_machine_config[i]=new Hashtable<Object, Object>();
 			parameter = "remote_machine_ip_" + String.valueOf(i);
 			svalue = String.valueOf((String) property.getProperty(parameter));
 			remote_machine_config[i].put("ip", svalue);
@@ -342,7 +340,7 @@ public class Configuration {
 		host_machine_config = new Hashtable[hosts_number];
 		
 		for (int i = 0; i < hosts_number; i++) {
-			host_machine_config[i]=new Hashtable();
+			host_machine_config[i]=new Hashtable<Object, Object>();
 			
 			parameter = "host_"+ String.valueOf(i)+"_ip";
 			svalue = String.valueOf( property.getProperty(parameter));
@@ -517,11 +515,12 @@ public class Configuration {
 	public double[][] getXi() {
 		return xi;
 	}
-
+	@SuppressWarnings("rawtypes")
 	public Hashtable[][] getArrivals_generator() {
 		return arrivals_generator;
 	}
 
+	@SuppressWarnings("rawtypes")
 	public Hashtable[][] getLifetime_generator() {
 		return lifetime_generator;
 	}

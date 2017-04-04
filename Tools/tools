@@ -1,0 +1,24 @@
+
+===============================================
+Stress the machine
+===============================================
+Stress two CPU-bound processes, one I/O-bound process, and one memory allocator process as follows
+stress -c 2 -i 1 -m 1 --vm-bytes 1G -t 60s 
+
+
+===============================================
+Statistics
+======================================================
+Statistics: 20 samples every 3 sec
+nmon -c 20 -s 3 -T -F ~/tnsm/stress_log.nmon
+sudo ./nmonchart log.nmon log.html
+
+
+===============================================
+Benchmark 
+======================================================
+sudo ab -n 1000 -c 100 http://localhost/
+
+
+
+

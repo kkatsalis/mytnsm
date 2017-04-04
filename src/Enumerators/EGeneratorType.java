@@ -14,7 +14,6 @@ Random,
 Exponential,
 Pareto,
 Fixed,
-Harmonic,
-Traces
+Poisson
 }
 

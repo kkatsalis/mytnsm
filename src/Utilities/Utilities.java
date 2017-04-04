@@ -7,19 +7,15 @@ package Utilities;
 
 import Controller.Configuration;
 
-import java.util.ArrayList;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
-import java.util.StringTokenizer;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 /**
  *
  * @author kostas
@@ -54,9 +50,9 @@ public class Utilities {
 		return conn;
 	}
 
-	public static void updateActivationStats(Connection conn,int slot, Configuration config,int[][][][] activation_matrix, int[][][] total_vms_allocated, double benefit) {
+	public static void updateActivationStats(Connection conn,int slot, Configuration config,int[][][][] activation_matrix) {
 
-		String sql = "INSERT INTO ACTIVATION(sim_id, run_id,slot,algorithm,host_id,provider_id,vm_type_id,service_id,vms_allocated,total_vms_allocated,all_vm_types_activated_total,benefit) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)";
+		String sql = "INSERT INTO ACTIVATION(sim_id, run_id,slot,algorithm,host_id,provider_id,vm_type_id,service_id,vms_allocated,total_vms_allocated) VALUES(?,?,?,?,?,?,?,?,?,?)";
 		String algorithm=config.getAlgorithm();
 		int sim_id=config.getSimulationID();
 		int run_id=config.getRunID();
@@ -64,23 +60,15 @@ public class Utilities {
 		int providers_number = config.getProviders_number();
 		int vm_types_number = config.getVm_types_number();
 		int services_number = config.getServices_number();
-		int vms_number=0;
-		int vms_activated_total=0;
-		int all_vm_types_activated_total=0;
+		int vms_activated=0;
+		int total_vms_activated=0;
+
 
 		for (int n = 0; n < hosts_number; n++) {
 			for (int p = 0; p < providers_number; p++) {
-
 				for (int v = 0; v < vm_types_number; v++) {
 					for (int s = 0; s < services_number; s++) {
-
-						all_vm_types_activated_total+=total_vms_allocated[p][v][s];
-					}
-				}
-				for (int v = 0; v < vm_types_number; v++) {
-					for (int s = 0; s < services_number; s++) {
-						vms_number = activation_matrix[n][p][v][s];
-						vms_activated_total=total_vms_allocated[p][v][s];
+						vms_activated = activation_matrix[n][p][v][s];
 
 						try{
 							PreparedStatement pstmt = conn.prepareStatement(sql); 
@@ -92,10 +80,8 @@ public class Utilities {
 							pstmt.setInt(6, p);
 							pstmt.setInt(7, v);
 							pstmt.setInt(8, s);
-							pstmt.setInt(9, vms_number);
-							pstmt.setDouble(10,vms_activated_total);
-							pstmt.setDouble(11,all_vm_types_activated_total);
-							pstmt.setDouble(12, benefit);
+							pstmt.setInt(9, vms_activated);
+							pstmt.setDouble(10,total_vms_activated);
 
 
 							pstmt.executeUpdate();
@@ -108,194 +94,226 @@ public class Utilities {
 		}
 	}
 
-	public static void updateVmRequestStats2Db(Connection conn,int slot, Configuration config,int[][][] vmRequestMatrix,int[][][] total_requests) {	
+	public static void updateTotalStats2Db(Connection conn,int slot, Configuration config,int[][][] total_vms_requested,int[][][] total_vms_allocated, double benefit) {	
 
-		String sql = "INSERT INTO REQUESTS(sim_id,run_id,slot, provider_id,vm_type_id,service_id,vms_requested,total_vms_requested,all_vms_requested_total) VALUES(?,?,?,?,?,?,?,?,?)";
+		String sql = "INSERT INTO TOTAL(sim_id,run_id,slot,provider_id, total_all_vms_requested,total_all_vms_activated,benefit) VALUES(?,?,?,?,?,?,?)";
 		int sim_id=config.getSimulationID();
 		int run_id=config.getRunID();
 		int providers_number = config.getProviders_number();
 		int vm_types_number = config.getVm_types_number();
 		int services_number = config.getServices_number();
-		int vms=0;
-		int total_vms=0;
-		int all_vms_requested_total=0;
+		int[] all_vm_types_requested_total=new int[providers_number];
+		int[] all_vm_types_activated_total=new int[providers_number];
 
 
 		for (int p = 0; p < providers_number; p++) {
-
 			for (int v = 0; v < vm_types_number; v++) {
 				for (int s = 0; s < services_number; s++) {
-					all_vms_requested_total+=total_requests[p][v][s];
+					all_vm_types_requested_total[p]+=total_vms_requested[p][v][s];
+					all_vm_types_activated_total[p]+=total_vms_allocated[p][v][s];
+
 				}
 
 			}
-
-			for (int v = 0; v < vm_types_number; v++) {
-				for (int s = 0; s < services_number; s++) {
-					vms=vmRequestMatrix[p][v][s];
-					total_vms=total_requests[p][v][s];
-					try {
-						PreparedStatement pstmt = conn.prepareStatement(sql);
-						pstmt.setInt(1, sim_id);
-						pstmt.setInt(2, run_id);
-						pstmt.setInt(3, slot);
-						pstmt.setInt(4, p);
-						pstmt.setInt(5, v);
-						pstmt.setInt(6, s);
-						pstmt.setInt(7, vms);
-						pstmt.setInt(8, total_vms);
-						pstmt.setInt(9, all_vms_requested_total);
-						pstmt.executeUpdate();
-					} catch (SQLException e) {
-						System.out.println(e.getMessage());
-					}
-				}
-			}	
 		}
 
-	}
-
-	public static String getVMTypeName(int vm_id){
-
-		String vm_type_name="";
-
-		switch (vm_id) {
-		case 0:
-			vm_type_name="kvm-small";
-			break;
-		case 1:
-			vm_type_name="kvm-medium";
-			break;
-		case 2:
-			vm_type_name="kvm-large";
-			break;
-
-		default:
-			break;
-		}
-
-		return vm_type_name;
-
-	}
-
-	@SuppressWarnings("rawtypes")
-	public static int[] getHostMaxCapacity(Configuration config, int host_id){
-
-		int resources_number=config.getResources_number();
-		int[] host_max_capacity=new int[resources_number];
-		Hashtable host_config=config.getHost_machine_config()[host_id];
-
-		for (int r = 0; r < resources_number; r++) {
-
-			switch (r) {
-			case 0:
-				host_max_capacity[r]=Integer.valueOf((String) host_config.get("cpu_cores"));
-				break;
-			case 1:
-				host_max_capacity[r]=Integer.valueOf((String) host_config.get("cpu_power"));
-				break;
-			case 2:
-				host_max_capacity[r]=Integer.valueOf((String) host_config.get("memory"));
-				break;
-			case 3:
-				host_max_capacity[r]=Integer.valueOf((String) host_config.get("storage"));
-				break;
-			case 4:
-				host_max_capacity[r]=Integer.valueOf((String) host_config.get("bandwidth"));
-				break;
-
-			default:
-				break;
+		for (int p = 0; p < providers_number; p++) {
+			try {
+				PreparedStatement pstmt = conn.prepareStatement(sql);
+				pstmt.setInt(1, sim_id);
+				pstmt.setInt(2, run_id);
+				pstmt.setInt(3, slot);
+				pstmt.setInt(4, p);
+				pstmt.setInt(5, all_vm_types_requested_total[p]);
+				pstmt.setInt(6, all_vm_types_activated_total[p]);
+				pstmt.setDouble(7, benefit);
+				pstmt.executeUpdate();
+			} catch (SQLException e) {
+				System.out.println(e.getMessage());
 			}
 		}
-		return  host_max_capacity;
+	}	
 
+
+
+
+public static void updateVmRequestStats2Db(Connection conn,int slot, Configuration config,int[][][] vmRequestMatrix,int[][][] total_vm_requests) {	
+
+	String sql = "INSERT INTO REQUESTS(sim_id,run_id,slot, provider_id,vm_type_id,service_id,vms_requested,total_vms_requested) VALUES(?,?,?,?,?,?,?,?)";
+	int sim_id=config.getSimulationID();
+	int run_id=config.getRunID();
+	int providers_number = config.getProviders_number();
+	int vm_types_number = config.getVm_types_number();
+	int services_number = config.getServices_number();
+	int vms=0;
+	int total_vms=0;
+
+	for (int p = 0; p < providers_number; p++) {
+		for (int v = 0; v < vm_types_number; v++) {
+			for (int s = 0; s < services_number; s++) {
+				vms=vmRequestMatrix[p][v][s];
+				total_vms=total_vm_requests[p][v][s];
+				try {
+					PreparedStatement pstmt = conn.prepareStatement(sql);
+					pstmt.setInt(1, sim_id);
+					pstmt.setInt(2, run_id);
+					pstmt.setInt(3, slot);
+					pstmt.setInt(4, p);
+					pstmt.setInt(5, v);
+					pstmt.setInt(6, s);
+					pstmt.setInt(7, vms);
+					pstmt.setInt(8, total_vms);
+					pstmt.executeUpdate();
+				} catch (SQLException e) {
+					System.out.println(e.getMessage());
+				}
+			}
+		}	
 	}
 
-	public static int getVmResourceCost(Configuration config, int vm_type, int resource_id){
+}
 
-		int resource_cost=0;
+public static String getVMTypeName(int vm_id){
 
-		switch (resource_id) {
+	String vm_type_name="";
+
+	switch (vm_id) {
+	case 0:
+		vm_type_name="kvm-small";
+		break;
+	case 1:
+		vm_type_name="kvm-medium";
+		break;
+	case 2:
+		vm_type_name="kvm-large";
+		break;
+
+	default:
+		break;
+	}
+
+	return vm_type_name;
+
+}
+
+@SuppressWarnings("rawtypes")
+public static int[] getHostMaxCapacity(Configuration config, int host_id){
+
+	int resources_number=config.getResources_number();
+	int[] host_max_capacity=new int[resources_number];
+	Hashtable host_config=config.getHost_machine_config()[host_id];
+
+	for (int r = 0; r < resources_number; r++) {
+
+		switch (r) {
 		case 0:
-			resource_cost=config.getVm_cpu_cores()[vm_type];
+			host_max_capacity[r]=Integer.valueOf((String) host_config.get("cpu_cores"));
 			break;
 		case 1:
-			resource_cost=config.getVm_cpu_power()[vm_type];
+			host_max_capacity[r]=Integer.valueOf((String) host_config.get("cpu_power"));
 			break;
 		case 2:
-			resource_cost=config.getVm_memory()[vm_type];
+			host_max_capacity[r]=Integer.valueOf((String) host_config.get("memory"));
 			break;
 		case 3:
-			resource_cost=config.getVm_storage()[vm_type];
+			host_max_capacity[r]=Integer.valueOf((String) host_config.get("storage"));
 			break;
 		case 4:
-			resource_cost=config.getVm_bandwidth()[vm_type];
+			host_max_capacity[r]=Integer.valueOf((String) host_config.get("bandwidth"));
 			break;
 
 		default:
 			break;
 		}
+	}
+	return  host_max_capacity;
 
-		return resource_cost;
+}
 
+public static int getVmResourceCost(Configuration config, int vm_type, int resource_id){
+
+	int resource_cost=0;
+
+	switch (resource_id) {
+	case 0:
+		resource_cost=config.getVm_cpu_cores()[vm_type];
+		break;
+	case 1:
+		resource_cost=config.getVm_cpu_power()[vm_type];
+		break;
+	case 2:
+		resource_cost=config.getVm_memory()[vm_type];
+		break;
+	case 3:
+		resource_cost=config.getVm_storage()[vm_type];
+		break;
+	case 4:
+		resource_cost=config.getVm_bandwidth()[vm_type];
+		break;
+
+	default:
+		break;
 	}
 
-	public static String buildServiceName(Configuration config, int provider_id, int service_id) {
+	return resource_cost;
 
-		String alias=config.getService_alias()[service_id];
-		String service_name=alias+"p"+provider_id;
+}
 
-		return service_name;
+public static String buildServiceName(Configuration config, int provider_id, int service_id) {
+
+	String alias=config.getService_alias()[service_id];
+	String service_name=alias+"p"+provider_id;
+
+	return service_name;
+}
+
+public static String getServiceName(Configuration config,int provider_id, int service_id) {
+
+	String alias=config.getService_alias()[service_id];
+	String service_name=alias+"p"+provider_id;
+
+	return service_name;
+}
+
+static ResultSet executeQR(String query, Connection conn){
+	ResultSet rs = null;
+	Statement stmt = null;
+	try {
+		stmt = conn.createStatement();
+		rs = stmt.executeQuery(query);
+	} catch(SQLException e) {
+		System.err.println("Query "+query+" failed");
 	}
+	return rs;
+}
 
-	public static String getServiceName(Configuration config,int provider_id, int service_id) {
+public static int getRequestsMadefromDB(Connection conn,int slot, int p, int s	)
+{
 
-		String alias=config.getService_alias()[service_id];
-		String service_name=alias+"p"+provider_id;
+	int requests = 0;
+	System.out.println("update request pattern called- slot:"+slot+"-p:"+p+"-s:"+s);
 
-		return service_name;
-	}
+	String qr = "SELECT request_index FROM CLIENTS WHERE PROVIDER_ID="+p
+			+" AND service_id="+s+" AND Slot="+slot;
 
-	static ResultSet executeQR(String query, Connection conn){
-		ResultSet rs = null;
-		Statement stmt = null;
-		try {
-			stmt = conn.createStatement();
-			rs = stmt.executeQuery(query);
-		} catch(SQLException e) {
-			System.err.println("Query "+query+" failed");
+	try {				
+		ResultSet rs = executeQR(qr,conn);
+
+		while (rs.next()) {
+			requests=Integer.valueOf(rs.getString("request_index"));
+//			System.out.println("slot"+slot+"_p"+p+"total-req: "+requests);
 		}
-		return rs;
+
+
+	}catch(NoSuchElementException e) {
+		e.printStackTrace();
+
+	} catch(SQLException e) {
+		System.err.println("Query failed");
 	}
+	return requests;
 
-	public static int getRequestsMadefromDB(Connection conn,int slot, int p, int s	)
-	{
-
-		int requests = 0;
-		System.out.println("update request pattern called- slot:"+slot+"-p:"+p+"-s:"+s);
-
-		String qr = "SELECT request_index FROM CLIENTS WHERE PROVIDER_ID="+p
-				+" AND service_id="+s+" AND Slot="+slot;
-
-		try {				
-			ResultSet rs = executeQR(qr,conn);
-
-			while (rs.next()) {
-				requests=Integer.valueOf(rs.getString("request_index"));
-				System.out.println("slot"+slot+"_p"+p+"total-req: "+requests);
-			}
-
-
-		}catch(NoSuchElementException e) {
-			e.printStackTrace();
-
-		} catch(SQLException e) {
-			System.err.println("Query failed");
-		}
-		return requests;
-
-	}
+}
 }
 
 

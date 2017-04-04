@@ -1,13 +1,5 @@
 package Controller;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Random;
-
-import Cplex.SchedulerData;
-import Enumerators.UpdateType;
 import Utilities.Utilities;
 
 public class GenericScheduler {
@@ -37,7 +29,7 @@ public class GenericScheduler {
 	}
 
 	//	 vmRequestMatrix[p][v][s] 
-	public int[][][][] FirstFit(int[][][] vmRequestsMatrix) {
+	public int[][][][] FirstFitPRR(int[][][] vmRequestsMatrix) {
 
 		int[][][][] activationMatrix = new int[hosts_number][providers_number][vm_types_number][services_number];
 
@@ -46,10 +38,9 @@ public class GenericScheduler {
 		int vms_examined;
 
 		for (int p = 0; p < providers_number; p++) {
-			for (int v = 0; v < vm_types_number; v++) {
-				for (int s = 0; s < services_number; s++) {
+			for (int s = 0; s < services_number; s++) {
+				for (int v = 0; v < vm_types_number; v++) {
 					vms_requested= vmRequestsMatrix[p][v][s];
-
 					vms_examined = 0;
 
 					while (vms_examined < vms_requested) {
@@ -59,8 +50,46 @@ public class GenericScheduler {
 
 							if (checkIfFits) {
 								activationMatrix[n][p][v][s]++;
-								controller.getRunning_allocations()[n][p][v][s]++;
+								controller.getRunning_allocations()[n][p][v][s]+=1;
+								break;
+							}
+						}
+						vms_examined++;
 
+					}
+
+				}
+
+			}
+
+		}
+
+		return activationMatrix;
+
+	}
+	
+	public int[][][][] FirstFitSRR(int[][][] vmRequestsMatrix) {
+
+		int[][][][] activationMatrix = new int[hosts_number][providers_number][vm_types_number][services_number];
+
+		int vms_requested = 0;
+		boolean checkIfFits = false;
+		int vms_examined;
+
+		for (int s = 0; s < services_number; s++) {
+			for (int p = 0; p < providers_number; p++) {
+				for (int v = 0; v < vm_types_number; v++) {
+					vms_requested= vmRequestsMatrix[p][v][s];
+					vms_examined = 0;
+
+					while (vms_examined < vms_requested) {
+
+						for (int n = 0; n < hosts_number; n++) {
+							checkIfFits = checkIftheVMFits(n,v);
+
+							if (checkIfFits) {
+								activationMatrix[n][p][v][s]++;
+								controller.getRunning_allocations()[n][p][v][s]+=1;
 								break;
 							}
 						}
@@ -84,7 +113,6 @@ public class GenericScheduler {
 
 
 
-	@SuppressWarnings("rawtypes")
 	private boolean checkIftheVMFits(int n,int vm) {
 
 

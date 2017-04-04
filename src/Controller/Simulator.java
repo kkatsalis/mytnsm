@@ -5,31 +5,16 @@ package Controller;
  * and open the template in the editor.
  */
 
-import Cplex.SchedulerData;
 import Enumerators.EGeneratorType;
 import Enumerators.ESlotDurationMetric;
-import Statistics.WebRequestStatsSlot;
-
 import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
-import jsc.distributions.Exponential;
-import jsc.distributions.Pareto;
-
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Iterator;
-import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.json.JSONException;
-
-import Clients.ClientsSimulator;
-import Controller.*;
 import Utilities.*;
 
 /**
@@ -63,9 +48,9 @@ public class Simulator {
 	List<String> _remote_machine_ips;
 
 	
-	public Simulator() {
+	public Simulator(Configuration config) {
 
-		this._config = new Configuration();
+		this._config = config;
 		this.hosts_number=_config.getHosts_number();
 		this.providers_number = _config.getProviders_number();
 		this.services_number = _config.getServices_number();
@@ -84,8 +69,6 @@ public class Simulator {
 	}
 
 	private void initializeSimulationObjects() {
-
-		Random rand = new Random();
 
 		// ----------Initialize Slots
 		// in every sclot there is a list of events to occur
@@ -182,20 +165,20 @@ public class Simulator {
 		int lifetime = calculateServiceLifeTime(providerID, serviceID);
 		int end_slot=checkIfServiceIsAlive(providerID, serviceID, currentSlot);
 
-//		if(end_slot!=-1){
-//			slots_diff=end_slot-currentSlot;
-//			currentSlot=end_slot; //postpone the request until is the previous is finished
-//		}
+		if(end_slot!=-1){
+			slots_diff=end_slot-currentSlot;
+			currentSlot=end_slot; //postpone the request until is the previous is finished
+		}
 		
 		
 		if (lifetime < 1)
-			lifetime = 2;
+			lifetime = 1;
 		
-//		if(slots_diff>0)
-//			if (lifetime>slots_diff)
-//				lifetime=lifetime-slots_diff;
-//			else
-//				lifetime=1;
+		if(slots_diff>0)
+			if (lifetime>slots_diff)
+				lifetime=lifetime-slots_diff;
+			else
+				lifetime=1;
 		
 		slot2RemoveService = currentSlot + lifetime;
 
@@ -308,7 +291,6 @@ public class Simulator {
 
 	}
 
-	@SuppressWarnings("static-access")
 	public final void StartExperiment() {
 
 		int duration = _config.getSlotDuration();

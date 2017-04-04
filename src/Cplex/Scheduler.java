@@ -222,16 +222,16 @@ public class Scheduler {
 
             // Solve model
             if (cplex.solve()) {
-                System.out.println();
-                System.out.println("Solution status = " + cplex.getStatus());
-                System.out.println();
-                System.out.println(" cost = " + cplex.getObjValue());
+//                System.out.println();
+//                System.out.println("Solution status = " + cplex.getStatus());
+//                System.out.println();
+//                System.out.println(" cost = " + cplex.getObjValue());
 
                 for (int i = 0; i < data.N; i++) {
                     for (int j = 0; j < data.P; j++) {
                         for (int v = 0; v < data.V; v++) {
                             for (int s = 0; s < data.S; s++) {
-                                System.out.println(" a[" + i + "],[" + j + "][" + v + "][" + s + "] = " + cplex.getValue(a[i][j][v][s]));
+                              //  System.out.println(" a[" + i + "],[" + j + "][" + v + "][" + s + "] = " + cplex.getValue(a[i][j][v][s]));
                                 activationMatrix[i][j][v][s] = (int) Math.round(cplex.getValue(a[i][j][v][s]));
                                 ios.write(activationMatrix[i][j][v][s] + " ");
                                 ios.flush();
@@ -243,7 +243,7 @@ public class Scheduler {
                 ios.flush();
 
                // updateData(data, activationMatrix);
-                System.out.println();
+//                System.out.println();
 
                 for (int i = 0; i < data.N; i++) {
                     for (int j = 0; j < data.P; j++) {
@@ -269,7 +269,7 @@ public class Scheduler {
             System.out.println("Concert Error: " + ex);
         }
 
-        System.out.println("Method Call: Cplex Run Called");
+//        System.out.println("Method Call: Cplex Run Called");
 
         return activationMatrix;
     }

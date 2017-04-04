@@ -1,0 +1,14 @@
+DELETE FROM REQUESTS
+DELETE FROM ACTIVATION
+DELETE FROM CLIENTS
+DELETE FORM TOTAL
+
+CREATE TABLE REQUESTS(sim_id NUMERIC,run_id NUMERIC,slot NUMERIC, provider_id NUMERIC,vm_type_id NUMERIC,service_id NUMERIC,vms_requested NUMERIC,total_vms_requested NUMERIC)
+CREATE TABLE ACTIVATION(sim_id NUMERIC, run_id NUMERIC,slot NUMERIC,algorithm TEXT,host_id NUMERIC,provider_id NUMERIC,vm_type_id NUMERIC,service_id NUMERIC,vms_allocated NUMERIC,total_vms_allocated NUMERIC)
+CREATE TABLE CLIENTS(sim_id NUMERIC,run_id NUMERIC,slot NUMERIC,provider_id NUMERIC,service_id NUMERIC,client_id NUMERIC,request_index NUMERIC,response_time NUMERIC) 
+CREATE TABLE TOTAL(sim_id NUMERIC,run_id NUMERIC,slot NUMERIC,provider_id NUMERIC, total_all_vms_requested NUMERIC,total_all_vms_activated NUMERIC,benefit NUMERIC)
+CREATE TABLE AVERAGES(sim_id NUMERIC, slot NUMERIC,algorithm TEXT,provider_id NUMERIC,avg_vms_requested NUMERIC,avg_vms_allocated NUMERIC,avg_benefit NUMERIC)
+
+default via 10.0.1.5 dev eth22 
+10.0.1.0/24 dev eth22  proto kernel  scope link  src 10.0.1.2  metric 1 
+192.168.122.0/24 dev virbr0  proto kernel  scope link  src 192.168.122.1 

@@ -105,7 +105,7 @@ public class Provider {
 
 			arrivalsType = (String) _config.getArrivals_generator()[providerID][s].get("arrivals_type");
 
-			if (arrivalsType.equals(EGeneratorType.Exponential.toString())) {
+			if (arrivalsType.equals(EGeneratorType.Poisson.toString())) {
 
 				lamda = (double) _config.getArrivals_generator()[providerID][s].get("arrivals_lamda");
 				_arrivalExpGenerator[s] = new Exponential(lamda);

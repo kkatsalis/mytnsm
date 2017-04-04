@@ -1,0 +1,491 @@
+=============================================================
+	Case 1: AB in OKEANOS with no other service
+ 	sudo ab -n 1000 -c 100 http://localhost/
+=============================================================
+
+=============================================================
+			Series 1
+=============================================================
+babylone@babylone:~/Downloads/nmonchart31$ ab -n 1000 -c 100 http://83.212.103.85/
+This is ApacheBench, Version 2.3 <$Revision: 1528965 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 83.212.103.85 (be patient)
+Completed 100 requests
+^C
+
+Server Software:        Apache/2.4.18
+Server Hostname:        83.212.103.85
+Server Port:            80
+
+Document Path:          /
+Document Length:        11321 bytes
+
+Concurrency Level:      100
+Time taken for tests:   13.245 seconds
+Complete requests:      155
+Failed requests:        0
+Total transferred:      1797225 bytes
+HTML transferred:       1754755 bytes
+Requests per second:    11.70 [#/sec] (mean)
+Time per request:       8545.234 [ms] (mean)
+Time per request:       85.452 [ms] (mean, across all concurrent requests)
+Transfer rate:          132.51 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:       85  111  16.5    119     129
+Processing:    83  119  25.1    109     174
+Waiting:       82  118  25.2    107     173
+Total:        175  231  37.9    223     303
+
+Percentage of the requests served within a certain time (ms)
+  50%    222
+  66%    251
+  75%    265
+  80%    274
+  90%    288
+  95%    296
+  98%    301
+  99%    302
+ 100%    303 (longest request)
+
+=============================================================
+			Series 2
+=============================================================
+babylone@babylone:~/Downloads/nmonchart31$ ab -n 1000 -c 30 http://83.212.103.85/
+This is ApacheBench, Version 2.3 <$Revision: 1528965 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 83.212.103.85 (be patient)
+Completed 100 requests
+Completed 200 requests
+^C
+
+Server Software:        Apache/2.4.18
+Server Hostname:        83.212.103.85
+Server Port:            80
+
+Document Path:          /
+Document Length:        11321 bytes
+
+Concurrency Level:      30
+Time taken for tests:   21.333 seconds
+Complete requests:      245
+Failed requests:        0
+Total transferred:      2840775 bytes
+HTML transferred:       2773645 bytes
+Requests per second:    11.48 [#/sec] (mean)
+Time per request:       2612.187 [ms] (mean)
+Time per request:       87.073 [ms] (mean, across all concurrent requests)
+Transfer rate:          130.04 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:       81   88   8.1     83     109
+Processing:    83   95  10.7     91     127
+Waiting:       82   93  10.7     88     125
+Total:        165  182  16.3    175     225
+
+Percentage of the requests served within a certain time (ms)
+  50%    175
+  66%    186
+  75%    197
+  80%    199
+  90%    209
+  95%    212
+  98%    221
+  99%    222
+ 100%    225 (longest request)
+
+=============================================================
+			Series 3
+=============================================================
+babylone@babylone:~/Downloads/nmonchart31$ ab -n 1000 -c 100 http://83.212.103.85/
+This is ApacheBench, Version 2.3 <$Revision: 1528965 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 83.212.103.85 (be patient)
+Completed 100 requests
+Completed 200 requests
+^C
+
+Server Software:        Apache/2.4.18
+Server Hostname:        83.212.103.85
+Server Port:            80
+
+Document Path:          /
+Document Length:        11321 bytes
+
+Concurrency Level:      100
+Time taken for tests:   5.495 seconds
+Complete requests:      260
+Failed requests:        0
+Total transferred:      3014700 bytes
+HTML transferred:       2943460 bytes
+Requests per second:    47.32 [#/sec] (mean)
+Time per request:       2113.305 [ms] (mean)
+Time per request:       21.133 [ms] (mean, across all concurrent requests)
+Transfer rate:          535.81 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:       90  125  17.5    129     160
+Processing:    83  133  31.3    129     210
+Waiting:       82  131  31.2    128     207
+Total:        188  258  31.6    251     350
+
+Percentage of the requests served within a certain time (ms)
+  50%    251
+  66%    255
+  75%    263
+  80%    276
+  90%    312
+  95%    332
+  98%    342
+  99%    346
+ 100%    350 (longest request)
+
+=============================================================
+			Series 4
+=============================================================
+babylone@babylone:~/Downloads/nmonchart31$ ab -n 1000 -c 100 http://83.212.103.85/
+This is ApacheBench, Version 2.3 <$Revision: 1528965 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 83.212.103.85 (be patient)
+Completed 100 requests
+Completed 200 requests
+^C
+
+Server Software:        Apache/2.4.18
+Server Hostname:        83.212.103.85
+Server Port:            80
+
+Document Path:          /
+Document Length:        11321 bytes
+
+Concurrency Level:      100
+Time taken for tests:   3.300 seconds
+Complete requests:      224
+Failed requests:        0
+Total transferred:      2597280 bytes
+HTML transferred:       2535904 bytes
+Requests per second:    67.87 [#/sec] (mean)
+Time per request:       1473.386 [ms] (mean)
+Time per request:       14.734 [ms] (mean, across all concurrent requests)
+Transfer rate:          768.52 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:       82  116  17.6    121     147
+Processing:    83  128  29.8    125     203
+Waiting:       82  127  29.8    123     200
+Total:        179  244  33.4    229     333
+
+Percentage of the requests served within a certain time (ms)
+  50%    229
+  66%    241
+  75%    261
+  80%    274
+  90%    301
+  95%    318
+  98%    327
+  99%    330
+ 100%    333 (longest request)
+
+=============================================================
+			Series 5
+=============================================================
+babylone@babylone:~/Downloads/nmonchart31$ ab -n 1000 -c 100 http://83.212.103.85/
+This is ApacheBench, Version 2.3 <$Revision: 1528965 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 83.212.103.85 (be patient)
+Completed 100 requests
+^C
+
+Server Software:        Apache/2.4.18
+Server Hostname:        83.212.103.85
+Server Port:            80
+
+Document Path:          /
+Document Length:        11321 bytes
+
+Concurrency Level:      100
+Time taken for tests:   3.637 seconds
+Complete requests:      155
+Failed requests:        0
+Total transferred:      1797225 bytes
+HTML transferred:       1754755 bytes
+Requests per second:    42.62 [#/sec] (mean)
+Time per request:       2346.423 [ms] (mean)
+Time per request:       23.464 [ms] (mean, across all concurrent requests)
+Transfer rate:          482.57 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:       82  116  13.8    121     132
+Processing:    83  131  34.4    125     202
+Waiting:       82  130  34.3    121     200
+Total:        174  248  42.8    235     331
+
+Percentage of the requests served within a certain time (ms)
+  50%    235
+  66%    266
+  75%    286
+  80%    297
+  90%    313
+  95%    323
+  98%    328
+  99%    329
+ 100%    331 (longest request)
+
+=============================================================
+			Series 6
+=============================================================
+babylone@babylone:~/Downloads/nmonchart31$ ab -n 1000 -c 100 http://83.212.103.85/
+This is ApacheBench, Version 2.3 <$Revision: 1528965 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 83.212.103.85 (be patient)
+Completed 100 requests
+^C
+
+Server Software:        Apache/2.4.18
+Server Hostname:        83.212.103.85
+Server Port:            80
+
+Document Path:          /
+Document Length:        11321 bytes
+
+Concurrency Level:      100
+Time taken for tests:   17.637 seconds
+Complete requests:      155
+Failed requests:        0
+Total transferred:      1797225 bytes
+HTML transferred:       1754755 bytes
+Requests per second:    8.79 [#/sec] (mean)
+Time per request:       11378.403 [ms] (mean)
+Time per request:       113.784 [ms] (mean, across all concurrent requests)
+Transfer rate:          99.52 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:       92 9819 7220.4  15150   15164
+Processing:    83  129  32.4    121     200
+Waiting:       82  127  32.3    119     199
+Total:        213 9948 7236.5  15261   15364
+
+Percentage of the requests served within a certain time (ms)
+  50%  15260
+  66%  15293
+  75%  15312
+  80%  15324
+  90%  15342
+  95%  15358
+  98%  15361
+  99%  15363
+ 100%  15364 (longest request)
+
+=============================================================
+			Series 7
+=============================================================
+babylone@babylone:~/Downloads/nmonchart31$ ab -n 1000 -c 100 http://83.212.103.85/
+This is ApacheBench, Version 2.3 <$Revision: 1528965 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 83.212.103.85 (be patient)
+Completed 100 requests
+^C
+
+Server Software:        Apache/2.4.18
+Server Hostname:        83.212.103.85
+Server Port:            80
+
+Document Path:          /
+Document Length:        11321 bytes
+
+Concurrency Level:      100
+Time taken for tests:   2.933 seconds
+Complete requests:      158
+Failed requests:        0
+Total transferred:      1832010 bytes
+HTML transferred:       1788718 bytes
+Requests per second:    53.87 [#/sec] (mean)
+Time per request:       1856.223 [ms] (mean)
+Time per request:       18.562 [ms] (mean, across all concurrent requests)
+Transfer rate:          610.02 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:       89  127  15.5    132     143
+Processing:    83  130  35.4    117     204
+Waiting:       82  128  35.5    116     202
+Total:        189  257  46.7    245     347
+
+Percentage of the requests served within a certain time (ms)
+  50%    245
+  66%    281
+  75%    299
+  80%    308
+  90%    329
+  95%    339
+  98%    344
+  99%    346
+ 100%    347 (longest request)
+
+=============================================================
+			Series 8
+=============================================================
+babylone@babylone:~/Downloads/nmonchart31$ ab -n 200 -c 100 http://83.212.103.85/
+This is ApacheBench, Version 2.3 <$Revision: 1528965 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 83.212.103.85 (be patient)
+Completed 100 requests
+^C
+
+Server Software:        Apache/2.4.18
+Server Hostname:        83.212.103.85
+Server Port:            80
+
+Document Path:          /
+Document Length:        11321 bytes
+
+Concurrency Level:      100
+Time taken for tests:   7.501 seconds
+Complete requests:      155
+Failed requests:        0
+Total transferred:      1797225 bytes
+HTML transferred:       1754755 bytes
+Requests per second:    20.66 [#/sec] (mean)
+Time per request:       4839.283 [ms] (mean)
+Time per request:       48.393 [ms] (mean, across all concurrent requests)
+Transfer rate:          233.99 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:       82  119  12.6    124     140
+Processing:    83  131  37.0    123     206
+Waiting:       82  129  36.9    121     204
+Total:        177  250  43.2    238     335
+
+Percentage of the requests served within a certain time (ms)
+  50%    237
+  66%    274
+  75%    291
+  80%    299
+  90%    316
+  95%    324
+  98%    331
+  99%    333
+ 100%    335 (longest request)
+
+=============================================================
+			Series 9
+=============================================================
+babylone@babylone:~/Downloads/nmonchart31$ ab -n 200 -c 100 http://83.212.103.85/
+This is ApacheBench, Version 2.3 <$Revision: 1528965 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 83.212.103.85 (be patient)
+Completed 100 requests
+Completed 200 requests
+Finished 200 requests
+
+
+Server Software:        Apache/2.4.18
+Server Hostname:        83.212.103.85
+Server Port:            80
+
+Document Path:          /
+Document Length:        11321 bytes
+
+Concurrency Level:      100
+Time taken for tests:   1.650 seconds
+Complete requests:      200
+Failed requests:        0
+Total transferred:      2319000 bytes
+HTML transferred:       2264200 bytes
+Requests per second:    121.21 [#/sec] (mean)
+Time per request:       825.030 [ms] (mean)
+Time per request:       8.250 [ms] (mean, across all concurrent requests)
+Transfer rate:          1372.46 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:      107  630 501.7   1114    1139
+Processing:    87  154  34.3    157     234
+Waiting:       86  152  34.2    156     233
+Total:        272  784 506.3   1201    1373
+
+Percentage of the requests served within a certain time (ms)
+  50%   1201
+  66%   1254
+  75%   1282
+  80%   1302
+  90%   1348
+  95%   1360
+  98%   1369
+  99%   1371
+ 100%   1373 (longest request)
+
+=============================================================
+			Series 10
+=============================================================
+Total of 155 requests completed
+babylone@babylone:~/Downloads/nmonchart31$ ab -n 200 -c 100 http://83.212.103.85/
+This is ApacheBench, Version 2.3 <$Revision: 1528965 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 83.212.103.85 (be patient)
+Completed 100 requests
+^C
+
+Server Software:        Apache/2.4.18
+Server Hostname:        83.212.103.85
+Server Port:            80
+
+Document Path:          /
+Document Length:        11321 bytes
+
+Concurrency Level:      100
+Time taken for tests:   4.541 seconds
+Complete requests:      155
+Failed requests:        0
+Total transferred:      1797225 bytes
+HTML transferred:       1754755 bytes
+Requests per second:    34.13 [#/sec] (mean)
+Time per request:       2929.925 [ms] (mean)
+Time per request:       29.299 [ms] (mean, across all concurrent requests)
+Transfer rate:          386.47 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:       91  127  12.2    127     161
+Processing:    83  137  39.2    126     218
+Waiting:       82  135  39.1    124     217
+Total:        174  264  39.8    245     349
+
+Percentage of the requests served within a certain time (ms)
+  50%    245
+  66%    277
+  75%    294
+  80%    307
+  90%    327
+  95%    340
+  98%    346
+  99%    347
+ 100%    349 (longest request)
+
